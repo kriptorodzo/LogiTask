@@ -1,0 +1,127 @@
+// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Models - using String instead of enums for SQLite compatibility
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  displayName   String?
+  role          String    @default("RECEPTION_COORDINATOR")
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tasks         Task[]
+  comments      TaskComment[]
+  auditLogs     AuditLog[]
+}
+
+model Mailbox {
+  id              String    @id @default(uuid())
+  emailAddress    String    @unique
+  displayName     String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  emails          Email[]
+}
+
+model Email {
+  id                    String    @id @default(uuid())
+  mailboxId             String
+  mailbox               Mailbox   @relation(fields: [mailboxId], references: [id])
+  microsoftGraphId      String?   @unique
+  subject               String
+  sender                String
+  senderEmail            String
+  body                  String?
+  bodyPlainText         String?
+  receivedAt            DateTime
+  processingStatus      String    @default("PENDING")
+  extractedSupplier     String?
+  extractedLocation    String?
+  extractedDeliveryDate DateTime?
+  extractedUrgency      String?
+  requestType           String    @default("UNCLASSIFIED")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  tasks                 Task[]
+}
+
+model Task {
+  id              String    @id @default(uuid())
+  emailId         String
+  email           Email     @relation(fields: [emailId], references: [id])
+  assigneeId      String?
+  assignee        User?     @relation(fields: [assigneeId], references: [id])
+  title           String
+  description     String?
+  status          String    @default("PROPOSED")
+  requestType     String
+  dueDate         DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  dependencies    TaskDependency[]   @relation("DependentTask")
+  dependents      TaskDependency[]   @relation("DependencyTask")
+  comments        TaskComment[]
+  auditLogs       AuditLog[]
+}
+
+model TaskDependency {
+  id              String    @id @default(uuid())
+  dependentId     String
+  dependent       Task      @relation("DependentTask", fields: [dependentId], references: [id])
+  dependencyId    String
+  dependency      Task      @relation("DependencyTask", fields: [dependencyId], references: [id])
+  offsetDays      Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  @@unique([dependentId, dependencyId])
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RoutingRule {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  requestType String
+  priority    Int      @default(0)
+  conditions  String   // Store conditions as JSON string
+  assigneeRole String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  taskId      String?
+  task        Task?    @relation(fields: [taskId], references: [id])
+  action      String
+  details     String   // Store action details as JSON string
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+}
