@@ -7,10 +7,18 @@ const isAzureConfigured = !!process.env.AZURE_AD_CLIENT_ID && !!process.env.AZUR
 // Auto-detect dev mode if Azure AD is not configured
 export const useDevMode = !isAzureConfigured;
 
-// Dev mode guard that allows all requests
+// Dev mode guard that allows all requests and sets a mock user
 @Injectable()
 export class DevAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    // Set mock dev user for development
+    request.user = {
+      id: 'dev-user-id',
+      email: 'dev@company.com',
+      role: 'MANAGER',
+      displayName: 'Dev User',
+    };
     return true;
   }
 }
@@ -20,6 +28,13 @@ export class DevAuthGuard implements CanActivate {
 export class HybridAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     if (useDevMode) {
+      const request = context.switchToHttp().getRequest();
+      request.user = {
+        id: 'dev-user-id',
+        email: 'dev@company.com',
+        role: 'MANAGER',
+        displayName: 'Dev User',
+      };
       return true;
     }
     const azureGuard = new (AuthGuard('azure-ad'))();
@@ -27,8 +42,7 @@ export class HybridAuthGuard implements CanActivate {
     if (typeof result === 'boolean') {
       return result;
     }
-    // Handle Observable case
-    return true; // Default to true if observable
+    return true;
   }
 }
 
