@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { TaskService } from './task.service';
+import { getAuthGuard } from '../common/utils/auth.utils';
 import { TaskOrchestratorService } from './task-orchestrator.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -17,7 +18,7 @@ export class TaskController {
   ) {}
 
   @Get()
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'List tasks' })
   async getTasks(
     @Query('status') status?: string,
@@ -28,21 +29,21 @@ export class TaskController {
   }
 
   @Get('my-tasks')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Get tasks for current user role' })
   async getMyTasks(@Req() req: any) {
     return this.taskService.getTasksByRole(req.user.role);
   }
 
   @Get(':id')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Get task by ID' })
   async getTask(@Param('id') id: string) {
     return this.taskService.getTaskById(id);
   }
 
   @Post()
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Create a new task' })
   async createTask(@Body() dto: CreateTaskDto, @Req() req: any) {
     return this.taskService.createTask({
@@ -52,14 +53,14 @@ export class TaskController {
   }
 
   @Put(':id')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Update task' })
   async updateTask(@Param('id') id: string, @Body() dto: UpdateTaskDto) {
     return this.taskService.updateTask(id, dto);
   }
 
   @Post(':id/approve')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Approve task and assign to coordinator' })
   async approveTask(
     @Param('id') id: string,
@@ -70,7 +71,7 @@ export class TaskController {
   }
 
   @Post(':id/reject')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Reject task' })
   async rejectTask(
     @Param('id') id: string,
@@ -81,7 +82,7 @@ export class TaskController {
   }
 
   @Put(':id/status')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Update task status' })
   async updateStatus(
     @Param('id') id: string,
@@ -92,7 +93,7 @@ export class TaskController {
   }
 
   @Post(':id/complete')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Complete task with result (FULL, PARTIAL, or FAILED)' })
   async completeTask(
     @Param('id') id: string,
@@ -113,7 +114,7 @@ export class TaskController {
   }
 
   @Post(':id/comments')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Add comment to task' })
   async addComment(
     @Param('id') id: string,
@@ -124,7 +125,7 @@ export class TaskController {
   }
 
   @Post('process-email/:emailId')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Process email and create tasks' })
   async processEmail(@Param('emailId') emailId: string) {
     // This would be called after email is fetched and processed

@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Query, UseGuards, ValidationPipe, UsePipes, Req, BadRequestException } from '@nestjs/common';
 import { IsString, IsOptional, IsDateString, IsBoolean, IsNumberString, Max, Validate } from 'class-validator';
 import { AuthGuard } from '@nestjs/passport';
+import { getAuthGuard } from '../common/utils/auth.utils';
 import { CaseAggregationService } from './case-aggregation.service';
 import { ReportsQueryService } from './reports-query.service';
 import { KpiSnapshotService } from './kpi-snapshot.service';
@@ -184,7 +185,7 @@ class DelaysQueryDto {
 
 @Controller('api/reports')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-@UseGuards(AuthGuard('azure-ad'))
+@UseGuards(getAuthGuard())
 export class ReportsController {
   constructor(
     private readonly caseAggregationService: CaseAggregationService,

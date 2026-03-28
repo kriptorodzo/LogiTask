@@ -56,4 +56,28 @@ export class AuthService {
   async getUserById(id: string) {
     return this.prisma.user.findUnique({ where: { id } });
   }
+
+  async validateDevUser(email: string, role: string): Promise<any> {
+    // Dev mode: find or create user by email
+    let user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          displayName: email.split('@')[0],
+          role: role as RoleType,
+        },
+      });
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+    };
+  }
 }

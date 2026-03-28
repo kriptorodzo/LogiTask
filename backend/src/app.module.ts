@@ -12,7 +12,7 @@ import { ReportsModule } from './reports/reports.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env.local', '.env'],
     }),
     PrismaModule,
     AuthModule,

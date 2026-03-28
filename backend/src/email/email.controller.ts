@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { EmailService } from './email.service';
+import { getAuthGuard } from '../common/utils/auth.utils';
 import { CreateMailboxDto } from './dto/create-mailbox.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
@@ -11,21 +12,21 @@ export class EmailController {
   constructor(private emailService: EmailService) {}
 
   @Post('mailboxes')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Create a new mailbox' })
   async createMailbox(@Body() dto: CreateMailboxDto) {
     return this.emailService.createMailbox(dto.emailAddress, dto.displayName);
   }
 
   @Get('mailboxes')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'List all mailboxes' })
   async getMailboxes() {
     return this.emailService.getMailboxes();
   }
 
   @Get()
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'List all emails' })
   async getEmails(
     @Query('processingStatus') processingStatus?: string,
@@ -35,7 +36,7 @@ export class EmailController {
   }
 
   @Get(':id')
-  @UseGuards(AuthGuard('azure-ad'))
+  @UseGuards(getAuthGuard())
   @ApiOperation({ summary: 'Get email by ID' })
   async getEmail(@Param('id') id: string) {
     return this.emailService.getEmailById(id);

@@ -4,10 +4,11 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import axios from 'axios';
 
 const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
-const skipAuth = process.env.SKIP_AUTH === 'true';
 
-// Dev mode: allow bypass of Azure AD authentication
-const providers = skipAuth
+// Auto-detect dev mode: use Credentials if Azure AD is not configured
+const isAzureConfigured = !!process.env.AZURE_AD_CLIENT_ID && !!process.env.AZURE_AD_CLIENT_SECRET && !!process.env.AZURE_AD_TENANT_ID;
+
+const providers = !isAzureConfigured
   ? [
       CredentialsProvider({
         name: 'Dev Login',
@@ -16,19 +17,24 @@ const providers = skipAuth
           role: { label: 'Role', type: 'text', placeholder: 'MANAGER' },
         },
         async authorize(credentials) {
-          // Dev mode: return mock user based on email
+          // Dev mode: call backend to create/validate user
+          try {
+            const response = await fetch(`${backendUrl}/auth/dev-login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: credentials?.email, role: credentials?.role }),
+            });
+            if (response.ok) {
+              const user = await response.json();
+              return { ...user, name: user.displayName };
+            }
+          } catch (e) {
+            console.error('Dev login error:', e);
+          }
+          // Fallback to mock user
           const email = credentials?.email || '';
           const role = credentials?.role || 'MANAGER';
-          
-          const devUsers: Record<string, { email: string; name: string; role: string }> = {
-            'manager@company.com': { email: 'manager@company.com', name: 'Dev Manager', role: 'MANAGER' },
-            'reception@company.com': { email: 'reception@company.com', name: 'Reception Coord', role: 'RECEPTION_COORDINATOR' },
-            'delivery@company.com': { email: 'delivery@company.com', name: 'Delivery Coord', role: 'DELIVERY_COORDINATOR' },
-            'distribution@company.com': { email: 'distribution@company.com', name: 'Distribution Coord', role: 'DISTRIBUTION_COORDINATOR' },
-          };
-          
-          const user = devUsers[email.toLowerCase()] || { email, name: 'Dev User', role };
-          return { ...user, id: email };
+          return { email, name: email.split('@')[0], role, id: email };
         },
       }),
     ]
