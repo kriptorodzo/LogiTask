@@ -11,6 +11,7 @@ frontend/out/
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # IDE
 .idea/
