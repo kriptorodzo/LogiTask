@@ -749,3 +749,249 @@ Phase 6 is complete when:
 - Role-based access is closed
 - Query performance is acceptable for pilot
 - Pilot checklist is green
+
+---
+
+# Phase 7: Pilot & Production Readiness
+
+## 7.1 Overview
+
+Phase 7 prepares the LogiTask MVP for real-world pilot deployment with production-grade reliability, monitoring, and operational procedures.
+
+## 7.2 Pilot Rollout
+
+### 7.2.1 Pilot Configuration
+
+**Settings:**
+- 1 mailbox for email ingestion
+- 1 manager user (full reports access)
+- 3 coordinators (reception, delivery, distribution)
+- Duration: 2 weeks (1 week shadow + 1 week controlled)
+
+**File:** `.env`, `prisma/seed.ts`
+**Method:** Configure environment and seed pilot users
+
+### 7.2.2 Pilot Scenarios
+
+Define daily scenarios for pilot:
+1. Morning email batch processing (8-9 AM)
+2. Afternoon task assignment (2-3 PM)
+3. End-of-day status review (5-6 PM)
+4. Weekly report generation (Friday)
+
+**File:** `docs/pilot-scenarios.md`
+**Method:** Document operational workflows
+
+### 7.2.3 Daily Review Process
+
+- Daily standup: review previous day's cases
+- Track: processed emails, completed tasks, OTIF rate
+- Issues: classification errors, webhook failures, delays
+
+**File:** `docs/pilot-review-template.md`
+**Method:** Create review template
+
+---
+
+## 7.3 Monitoring Setup
+
+### 7.3.1 API Metrics
+
+Track and log:
+- `/api/reports/*` endpoint response times
+- `/api/emails/*` webhook processing times
+- `/api/tasks/*` operations latency
+- Failed authentication attempts
+
+**File:** `backend/src/common/interceptors/metrics.interceptor.ts`
+**Method:** Add response time logging
+
+### 7.3.2 Report Query Performance
+
+Monitor:
+- Overview report query time (target: <2 sec)
+- Cases list with pagination (target: <3 sec)
+- OTIF trend calculation (target: <3 sec)
+- Bulk recalculation duration
+
+**File:** `backend/src/reports/reports-query.service.ts`
+**Method:** Add query timing logs
+
+### 7.3.3 Error Tracking
+
+Track:
+- Failed webhook deliveries
+- Email parsing errors
+- Task orchestration failures
+- Report calculation errors
+
+**File:** `backend/src/common/filters`
+**Method:** Add global error filter with logging
+
+### 7.3.4 Frontend Monitoring
+
+Track:
+- Page load times
+- API call failures
+- User interaction errors
+
+**File:** `frontend/src/app/layout.tsx`
+**Method:** Add error boundary and Sentry/logging
+
+---
+
+## 7.4 Production Hardening
+
+### 7.4.1 PostgreSQL Production Config
+
+- Configure production connection pool
+- Add query timeout (30 sec max)
+- Enable SSL for production
+- Set up read replicas if needed
+
+**File:** `backend/prisma/schema.prisma`, `.env.production`
+**Method:** Update Prisma config for production
+
+### 7.4.2 Backup Policy
+
+- Daily automated backups
+- Point-in-time recovery config
+- Backup verification procedure
+- Retention: 30 days
+
+**File:** `docs/backup-procedure.md`
+**Method:** Document backup strategy
+
+### 7.4.3 Secrets Management
+
+- Move all secrets to environment variables
+- Azure AD credentials via config
+- Database connection string secure
+- Session secrets rotated
+
+**File:** `.env.example`
+**Method:** Audit and secure all secrets
+
+### 7.4.4 Environment Separation
+
+- Development: local SQLite
+- Staging: separate PostgreSQL instance
+- Production: dedicated PostgreSQL with backups
+
+**File:** `docker-compose.yml`, `.env.staging`
+**Method:** Define environment configs
+
+### 7.4.5 Job/Webhook Retry Policy
+
+- Email processing: 3 retries with exponential backoff
+- Webhook deliveries: 5 retries max
+- Background jobs: dead letter queue after 3 failures
+
+**File:** `backend/src/email/email-processor.service.ts`
+**Method:** Add retry logic with CircuitBreaker pattern
+
+### 7.4.6 Incident SOP
+
+Document:
+- Severity levels (P1-P4)
+- Escalation path
+- Rollback procedures
+- Communication template
+
+**File:** `docs/incident-response.md`
+**Method:** Create incident response guide
+
+---
+
+## 7.5 Business Validation
+
+### 7.5.1 Manual OTIF Verification
+
+- Select 20-30 sample cases from production data
+- Manually calculate expected OTIF for each
+- Compare with system values
+- Document discrepancies
+
+**File:** `docs/otif-validation.xlsx`
+**Method:** Run verification queries, compare results
+
+### 7.5.2 Coordinator Discipline Check
+
+Verify coordinators:
+- Update status promptly
+- Set completion result correctly
+- Don't skip required fields
+
+**File:** `backend/src/task/task.service.ts`
+**Method:** Add validation warnings
+
+### 7.5.3 Classification Review
+
+- Review false positive/negative classifications
+- Adjust rules if needed
+- Document edge cases
+
+**File:** `docs/classification-rules.md`
+**Method:** Analyze misclassifications
+
+### 7.5.4 Manager Report Validation
+
+- Verify report numbers match reality
+- Check date range filters work correctly
+- Validate export functionality
+
+**File:** `frontend/src/app/reports/`
+**Method:** Test with real data
+
+---
+
+## 7.6 Exit Criteria
+
+Phase 7 is complete when:
+- [ ] Pilot runs for 2 weeks with real users
+- [ ] No P1 incidents during pilot
+- [ ] API latency within targets
+- [ ] OTIF manually verified on 20+ cases
+- [ ] Backup/restore tested
+- [ ] Incident SOP documented
+- [ ] Production environment ready for deployment
+
+---
+
+## 7.7 Parallel Hardening Track
+
+While Phase 7 runs, parallel work on:
+
+### 7.7.1 Integration Tests for Reports APIs
+
+**File:** `backend/test/reports.integration.spec.ts`
+**Method:** Test all reports endpoints with Jest/Supertest
+
+### 7.7.2 Unit Tests for CaseAggregationService
+
+**File:** `backend/test/case-aggregation.unit.spec.ts`
+**Method:** Test OTIF calculation scenarios
+
+### 7.7.3 Benchmark Script
+
+**File:** `backend/scripts/benchmark.ts`
+**Method:** Generate 5000 emails, 15000 tasks, measure query performance
+
+---
+
+## 7.8 Deliverables of Phase 7
+
+### Must produce
+- Pilot configuration and scenarios
+- Monitoring dashboards/logs
+- Production-ready environment configs
+- Backup/restore procedures
+- Incident response guide
+- OTIF validation report
+
+### Exit criteria
+Phase 7 is complete when:
+- Pilot completes successfully
+- Production is hardened
+- Monitoring is in place
+- Business validates OTIF accuracy
