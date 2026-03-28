@@ -21,11 +21,13 @@ if errorlevel 1 (
 
 echo.
 echo [2/4] Running Prisma migrations...
+cd /d "%PROJECT_DIR%backend"
+set DATABASE_URL=file:./dev.db
 call npx prisma migrate dev
 
 echo.
 echo [3/4] Seeding database...
-call npx prisma seed
+call npm run prisma:seed
 
 echo.
 echo [4/4] Starting Backend server...
