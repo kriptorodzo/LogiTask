@@ -124,6 +124,23 @@ npm run dev
 - Task status updates
 - Comments and collaboration
 
+### Phase 6: Reports & OTIF
+- Overview dashboard with KPI metrics
+- OTIF trend charts (daily/weekly/monthly)
+- Cases list with filters and export
+- Coordinators performance analytics
+- Suppliers & locations breakdown
+- Delay reasons analysis
+- Personal scorecard for coordinators
+- Role-based access control for reports
+
+### Phase 7: Pilot & Production Readiness
+- Pilot configuration (users, scenarios)
+- Monitoring & error handling
+- Retry logic with exponential backoff
+- Backup procedures
+- Incident response guide
+
 ## User Roles
 
 | Role | Responsibilities |
@@ -131,7 +148,7 @@ npm run dev
 | MANAGER | Review proposed tasks, approve/reject, assign to coordinators |
 | RECEPTION_COORDINATOR | Handle inbound receipts |
 | DELIVERY_COORDINATOR | Handle outbound preparation and delivery |
-| DISTRIBUTION_COORDINATOR | Handle transfer and distribution |
+| DISTRIBUTION_COORDINATOR | Handle transfer, transport & distribution |
 
 ## API Documentation
 
