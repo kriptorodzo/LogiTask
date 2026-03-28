@@ -39,6 +39,7 @@ interface DelayReason {
 
 export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<OverviewMetrics | null>(null);
   const [trend, setTrend] = useState<OtifTrend[]>([]);
   const [delays, setDelays] = useState<DelayReason[]>([]);
@@ -53,6 +54,7 @@ export default function ReportsPage() {
 
   async function loadReports() {
     setLoading(true);
+    setError(null);
     try {
       const [metricsData, trendData, delaysData] = await Promise.all([
         reportsApi.getOverview({ from: dateRange.from, to: dateRange.to }),
@@ -62,8 +64,9 @@ export default function ReportsPage() {
       setMetrics(metricsData);
       setTrend(trendData);
       setDelays(delaysData);
-    } catch (error) {
-      console.error('Failed to load reports:', error);
+    } catch (err) {
+      console.error('Failed to load reports:', err);
+      setError('Failed to load reports. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -92,6 +95,23 @@ export default function ReportsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <h2 className="text-red-800 text-lg font-semibold mb-2">Error</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={loadReports}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
@@ -110,6 +130,12 @@ export default function ReportsPage() {
             onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
             className="px-3 py-2 border rounded"
           />
+          <button
+            onClick={() => setDateRange({ from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] })}
+            className="px-3 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Reset
+          </button>
         </div>
       </div>
 

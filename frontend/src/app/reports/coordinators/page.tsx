@@ -19,6 +19,7 @@ interface Coordinator {
 
 export default function CoordinatorsPage() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [coordinators, setCoordinators] = useState<Coordinator[]>([]);
   const [dateRange, setDateRange] = useState({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -32,6 +33,7 @@ export default function CoordinatorsPage() {
 
   async function loadCoordinators() {
     setLoading(true);
+    setError(null);
     try {
       const data = await reportsApi.getCoordinators({
         from: dateRange.from,
@@ -39,8 +41,9 @@ export default function CoordinatorsPage() {
         roleCode: roleFilter || undefined,
       });
       setCoordinators(data);
-    } catch (error) {
-      console.error('Failed to load coordinators:', error);
+    } catch (err) {
+      console.error('Failed to load coordinators:', err);
+      setError('Failed to load coordinators. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -60,6 +63,23 @@ export default function CoordinatorsPage() {
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <h2 className="text-red-800 text-lg font-semibold mb-2">Error</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={loadCoordinators}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -93,6 +113,12 @@ export default function CoordinatorsPage() {
             onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
             className="px-3 py-2 border rounded"
           />
+          <button
+            onClick={() => { setRoleFilter(''); setDateRange({ from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] }); }}
+            className="px-3 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Reset
+          </button>
         </div>
       </div>
 

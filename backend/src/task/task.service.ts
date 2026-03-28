@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TASK_STATUS, ROLES } from '../common/constants';
+import { CaseAggregationService } from '../reports/case-aggregation.service';
 
 @Injectable()
 export class TaskService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private caseAggregationService: CaseAggregationService,
+  ) {}
 
   /**
    * Record a status change in TaskStatusHistory
@@ -118,6 +122,9 @@ export class TaskService {
 
     await this.recordStatusChange(id, currentTask?.status || null, TASK_STATUS.APPROVED, userId, `Assigned to ${assigneeId}`);
 
+    // Trigger case recalculation when task is approved
+    this.triggerCaseRecalculation(task.emailId).catch(console.error);
+
     return task;
   }
 
@@ -170,6 +177,11 @@ export class TaskService {
 
     await this.recordStatusChange(id, currentTask?.status || null, status, userId);
 
+    // Trigger case recalculation when task status changes to DONE
+    if (status === TASK_STATUS.DONE) {
+      this.triggerCaseRecalculation(task.emailId).catch(console.error);
+    }
+
     return task;
   }
 
@@ -212,7 +224,57 @@ export class TaskService {
 
     await this.recordStatusChange(id, currentTask?.status || null, TASK_STATUS.DONE, userId, `Completed: ${completionResult}`);
 
+    // Trigger case recalculation when task is completed
+    this.triggerCaseRecalculation(task.emailId).catch(console.error);
+
     return task;
+  }
+
+  /**
+   * Update isRequiredForCase flag on a task
+   */
+  async updateIsRequiredForCase(id: string, isRequiredForCase: boolean, userId: string) {
+    const currentTask = await this.prisma.task.findUnique({ where: { id } });
+    
+    const task = await this.prisma.task.update({
+      where: { id },
+      data: { isRequiredForCase },
+      include: { email: true },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        taskId: id,
+        action: 'UPDATE_IS_REQUIRED_FOR_CASE',
+        details: JSON.stringify({ 
+          message: `Task isRequiredForCase changed to ${isRequiredForCase}`,
+          previousValue: currentTask?.isRequiredForCase,
+          newValue: isRequiredForCase,
+        }),
+      },
+    });
+
+    // Trigger case recalculation when isRequiredForCase changes
+    this.triggerCaseRecalculation(task.emailId).catch(console.error);
+
+    return task;
+  }
+
+  /**
+   * Helper method to trigger case recalculation (fire and forget)
+   */
+  private async triggerCaseRecalculation(emailId: string): Promise<void> {
+    try {
+      const emailCase = await this.prisma.emailCase.findUnique({
+        where: { emailId },
+      });
+      if (emailCase) {
+        await this.caseAggregationService.recalculateCase(emailCase.id);
+      }
+    } catch (error) {
+      console.error('Failed to trigger case recalculation:', error);
+    }
   }
 
   async addComment(taskId: string, userId: string, content: string) {

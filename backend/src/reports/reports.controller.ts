@@ -1,69 +1,173 @@
-import { Controller, Get, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, ValidationPipe, UsePipes } from '@nestjs/common';
+import { IsString, IsOptional, IsDateString, IsBoolean, IsNumberString, Max, Min } from 'class-validator';
 import { CaseAggregationService } from './case-aggregation.service';
 import { ReportsQueryService } from './reports-query.service';
 import { KpiSnapshotService } from './kpi-snapshot.service';
 
 class RecalculateDto {
+  @IsOptional()
+  @IsDateString()
   from?: string;
+
+  @IsOptional()
+  @IsDateString()
   to?: string;
+
+  @IsOptional()
+  @IsString()
   caseId?: string;
+
+  @IsOptional()
+  @IsBoolean()
   rebuildSnapshots?: boolean;
 }
 
 class CasesQueryDto {
+  @IsOptional()
+  @IsDateString()
   from?: string;
+
+  @IsOptional()
+  @IsDateString()
   to?: string;
+
+  @IsOptional()
+  @IsString()
   otif?: string;
+
+  @IsOptional()
+  @IsString()
   onTime?: string;
+
+  @IsOptional()
+  @IsString()
   inFull?: string;
+
+  @IsOptional()
+  @IsString()
   supplierName?: string;
+
+  @IsOptional()
+  @IsString()
   locationName?: string;
+
+  @IsOptional()
+  @IsString()
   classification?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  @Max(500)
   page?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  @Max(500)
   pageSize?: string;
 }
 
 class OverviewQueryDto {
+  @IsOptional()
+  @IsDateString()
   from?: string;
+
+  @IsOptional()
+  @IsDateString()
   to?: string;
+
+  @IsOptional()
+  @IsString()
   roleCode?: string;
+
+  @IsOptional()
+  @IsString()
   supplierName?: string;
+
+  @IsOptional()
+  @IsString()
   locationName?: string;
+
+  @IsOptional()
+  @IsString()
   coordinatorUserId?: string;
 }
 
 class TrendQueryDto {
+  @IsOptional()
+  @IsDateString()
   from?: string;
+
+  @IsOptional()
+  @IsDateString()
   to?: string;
+
+  @IsOptional()
+  @IsString()
   groupBy?: string;
+
+  @IsOptional()
+  @IsString()
   supplierName?: string;
+
+  @IsOptional()
+  @IsString()
   locationName?: string;
+
+  @IsOptional()
+  @IsString()
   coordinatorUserId?: string;
 }
 
 class CoordinatorsQueryDto {
+  @IsOptional()
+  @IsDateString()
   from?: string;
+
+  @IsOptional()
+  @IsDateString()
   to?: string;
+
+  @IsOptional()
+  @IsString()
   roleCode?: string;
 }
 
 class SuppliersQueryDto {
+  @IsOptional()
+  @IsDateString()
   from?: string;
+
+  @IsOptional()
+  @IsDateString()
   to?: string;
 }
 
 class LocationsQueryDto {
+  @IsOptional()
+  @IsDateString()
   from?: string;
+
+  @IsOptional()
+  @IsDateString()
   to?: string;
 }
 
 class DelaysQueryDto {
+  @IsOptional()
+  @IsDateString()
   from?: string;
+
+  @IsOptional()
+  @IsDateString()
   to?: string;
+
+  @IsOptional()
+  @IsString()
   groupBy?: string;
 }
 
 @Controller('api/reports')
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class ReportsController {
   constructor(
     private readonly caseAggregationService: CaseAggregationService,

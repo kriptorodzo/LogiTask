@@ -29,6 +29,7 @@ interface Case {
 
 export default function CasesPage() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -48,6 +49,7 @@ export default function CasesPage() {
 
   async function loadCases() {
     setLoading(true);
+    setError(null);
     try {
       const data = await reportsApi.getCases({
         from: dateRange.from,
@@ -60,8 +62,9 @@ export default function CasesPage() {
       });
       setCases(data.cases);
       setTotal(data.total);
-    } catch (error) {
-      console.error('Failed to load cases:', error);
+    } catch (err) {
+      console.error('Failed to load cases:', err);
+      setError('Failed to load cases. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -88,6 +91,23 @@ export default function CasesPage() {
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <h2 className="text-red-800 text-lg font-semibold mb-2">Error</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={loadCases}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -139,6 +159,12 @@ export default function CasesPage() {
           onChange={(e) => setFilters({ ...filters, locationName: e.target.value })}
           className="px-3 py-2 border rounded"
         />
+        <button
+          onClick={() => setFilters({ otif: '', supplierName: '', locationName: '' })}
+          className="px-3 py-2 text-gray-600 hover:text-gray-800"
+        >
+          Reset Filters
+        </button>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
