@@ -91,6 +91,27 @@ export class TaskController {
     return this.taskService.updateStatus(id, status, req.user.id);
   }
 
+  @Post(':id/complete')
+  @UseGuards(AuthGuard('azure-ad'))
+  @ApiOperation({ summary: 'Complete task with result (FULL, PARTIAL, or FAILED)' })
+  async completeTask(
+    @Param('id') id: string,
+    @Body() body: { 
+      completionResult: 'FULL' | 'PARTIAL' | 'FAILED';
+      delayReasonCode?: string;
+      delayReasonText?: string;
+    },
+    @Req() req: any,
+  ) {
+    return this.taskService.completeTask(
+      id, 
+      body.completionResult, 
+      req.user.id,
+      body.delayReasonCode,
+      body.delayReasonText
+    );
+  }
+
   @Post(':id/comments')
   @UseGuards(AuthGuard('azure-ad'))
   @ApiOperation({ summary: 'Add comment to task' })

@@ -23,6 +23,7 @@ model User {
   tasks         Task[]
   comments      TaskComment[]
   auditLogs     AuditLog[]
+  statusHistory TaskStatusHistory[]
 }
 
 model Mailbox {
@@ -57,6 +58,7 @@ model Email {
   updatedAt             DateTime  @updatedAt
 
   tasks                 Task[]
+  case                  EmailCase?
 }
 
 model Task {
@@ -73,10 +75,20 @@ model Task {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // New fields for Reports & OTIF module
+  assignedAt      DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  completionResult String?  // FULL, PARTIAL, FAILED
+  delayReasonCode  String?
+  delayReasonText  String?
+  isRequiredForCase Boolean @default(true)
+
   dependencies    TaskDependency[]   @relation("DependentTask")
   dependents      TaskDependency[]   @relation("DependencyTask")
   comments        TaskComment[]
   auditLogs       AuditLog[]
+  statusHistory   TaskStatusHistory[]
 }
 
 model TaskDependency {
@@ -124,4 +136,85 @@ model AuditLog {
   details     String   // Store action details as JSON string
   ipAddress   String?
   createdAt   DateTime @default(now())
+}
+
+// New models for Reports & OTIF module
+
+model EmailCase {
+  id                    String    @id @default(uuid())
+  emailId               String    @unique
+  email                 Email     @relation(fields: [emailId], references: [id])
+  classification        String?   // INBOUND_RECEIPT, OUTBOUND_DELIVERY, DISTRIBUTION, OTHER
+  priority              String?   // HIGH, MEDIUM, LOW
+  supplierName         String?
+  locationName          String?
+  deliveryDueAt        DateTime?
+  caseDueAt            DateTime?
+  approvedAt           DateTime?
+  completedAt          DateTime?
+  isOnTime             Boolean?
+  isInFull             Boolean?
+  isOtif               Boolean?
+  approvalLeadMinutes  Int?
+  executionLeadMinutes Int?
+  totalTasks           Int       @default(0)
+  completedTasks       Int       @default(0)
+  partialTasks         Int       @default(0)
+  failedTasks          Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([caseDueAt])
+  @@index([approvedAt])
+  @@index([completedAt])
+  @@index([supplierName])
+  @@index([locationName])
+  @@index([isOtif])
+}
+
+model TaskStatusHistory {
+  id              String    @id @default(uuid())
+  taskId          String
+  task            Task      @relation(fields: [taskId], references: [id])
+  fromStatus      String?
+  toStatus        String
+  changedByUserId String?
+  changedBy       User?     @relation(fields: [changedByUserId], references: [id])
+  changedAt       DateTime  @default(now())
+  note            String?
+
+  @@index([taskId, changedAt])
+}
+
+model KpiSnapshot {
+  id                String    @id @default(uuid())
+  periodType        String    // DAY, WEEK, MONTH
+  periodStart       DateTime
+  periodEnd         DateTime
+  roleCode          String?
+  coordinatorUserId String?
+  supplierName      String?
+  locationName      String?
+
+  // Metrics
+  totalCases        Int       @default(0)
+  otifCases         Int       @default(0)
+  onTimeCases       Int       @default(0)
+  inFullCases       Int       @default(0)
+  overdueCases      Int       @default(0)
+  avgApprovalMinutes Int?
+  avgExecutionMinutes Int?
+
+  // Rates
+  otifRate          Float?
+  onTimeRate        Float?
+  inFullRate        Float?
+
+  createdAt        DateTime  @default(now())
+
+  @@index([periodType, periodStart, periodEnd])
+  @@index([roleCode])
+  @@index([coordinatorUserId])
+  @@index([supplierName])
+  @@index([locationName])
 }

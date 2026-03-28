@@ -6,6 +6,7 @@ import { EmailModule } from './email/email.module';
 import { TaskModule } from './task/task.module';
 import { UserModule } from './user/user.module';
 import { NotificationModule } from './notification/notification.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { NotificationModule } from './notification/notification.module';
     TaskModule,
     UserModule,
     NotificationModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

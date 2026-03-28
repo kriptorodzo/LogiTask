@@ -139,4 +139,84 @@ export const notificationApi = {
   },
 };
 
+// Reports API
+export const reportsApi = {
+  getOverview: async (params?: {
+    from?: string;
+    to?: string;
+    roleCode?: string;
+    supplierName?: string;
+    locationName?: string;
+    coordinatorUserId?: string;
+  }) => {
+    const { data } = await apiClient.get('/api/reports/overview', { params });
+    return data;
+  },
+  getCases: async (params?: {
+    from?: string;
+    to?: string;
+    otif?: boolean;
+    onTime?: boolean;
+    inFull?: boolean;
+    supplierName?: string;
+    locationName?: string;
+    classification?: string;
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const { data } = await apiClient.get('/api/reports/cases', { params });
+    return data;
+  },
+  getOtifTrend: async (params?: {
+    from?: string;
+    to?: string;
+    groupBy?: 'day' | 'week' | 'month';
+    supplierName?: string;
+    locationName?: string;
+    coordinatorUserId?: string;
+  }) => {
+    const { data } = await apiClient.get('/api/reports/otif/trend', { params });
+    return data;
+  },
+  getCoordinators: async (params?: {
+    from?: string;
+    to?: string;
+    roleCode?: string;
+  }) => {
+    const { data } = await apiClient.get('/api/reports/coordinators', { params });
+    return data;
+  },
+  getSuppliers: async (params?: {
+    from?: string;
+    to?: string;
+  }) => {
+    const { data } = await apiClient.get('/api/reports/suppliers', { params });
+    return data;
+  },
+  getLocations: async (params?: {
+    from?: string;
+    to?: string;
+  }) => {
+    const { data } = await apiClient.get('/api/reports/locations', { params });
+    return data;
+  },
+  getDelayReasons: async (params?: {
+    from?: string;
+    to?: string;
+    groupBy?: 'reason' | 'coordinator' | 'supplier' | 'location';
+  }) => {
+    const { data } = await apiClient.get('/api/reports/delays', { params });
+    return data;
+  },
+  recalculate: async (body: {
+    from?: string;
+    to?: string;
+    caseId?: string;
+    rebuildSnapshots?: boolean;
+  }) => {
+    const { data } = await apiClient.post('/api/reports/recalculate', body);
+    return data;
+  },
+};
+
 export default apiClient;

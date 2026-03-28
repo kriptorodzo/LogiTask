@@ -2,6 +2,8 @@
 
 An automated logistics email task management system that reads incoming emails, extracts operational requests, creates tasks, and assigns them to appropriate coordinators.
 
+This project provides a complete solution for automating logistics operations by integrating with your email system and Azure AD authentication.
+
 ## Architecture
 
 - **Frontend**: Next.js 14 with TypeScript, NextAuth.js for authentication
@@ -12,7 +14,7 @@ An automated logistics email task management system that reads incoming emails, 
 
 ## Project Structure
 
-```
+```text
 ├── backend/                 # NestJS backend API
 │   ├── src/
 │   │   ├── auth/           # Azure AD authentication
@@ -133,12 +135,12 @@ npm run dev
 
 ## API Documentation
 
-Once the backend is running, visit `http://localhost:4000/api/docs` for Swagger documentation.
+Once the backend is running, visit [http://localhost:4000/api/docs](http://localhost:4000/api/docs) for Swagger documentation.
 
 ## Environment Variables
 
 ### Backend (.env)
-```
+```properties
 DATABASE_URL=postgresql://user:password@localhost:5432/logistics_db
 AZURE_CLIENT_ID=your-azure-client-id
 AZURE_CLIENT_SECRET=your-azure-client-secret
@@ -148,7 +150,7 @@ PORT=4000
 ```
 
 ### Frontend (.env.local)
-```
+```properties
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-secret
 AZURE_AD_CLIENT_ID=your-azure-client-id
@@ -159,7 +161,7 @@ BACKEND_URL=http://localhost:4000
 
 ## Deployment
 
-For production deployment:
+Ready to go to production? Here's how to deploy:
 
 1. Set up Azure resources (App Service, PostgreSQL, Key Vault)
 2. Configure environment variables in Azure

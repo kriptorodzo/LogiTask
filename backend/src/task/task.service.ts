@@ -6,6 +6,27 @@ import { TASK_STATUS, ROLES } from '../common/constants';
 export class TaskService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Record a status change in TaskStatusHistory
+   */
+  private async recordStatusChange(
+    taskId: string,
+    fromStatus: string | null,
+    toStatus: string,
+    changedByUserId: string,
+    note?: string
+  ) {
+    return this.prisma.taskStatusHistory.create({
+      data: {
+        taskId,
+        fromStatus,
+        toStatus,
+        changedByUserId,
+        note,
+      },
+    });
+  }
+
   async createTask(data: {
     emailId: string;
     title: string;
@@ -75,11 +96,13 @@ export class TaskService {
   }
 
   async approveTask(id: string, assigneeId: string, userId: string) {
+    const currentTask = await this.prisma.task.findUnique({ where: { id } });
     const task = await this.prisma.task.update({
       where: { id },
       data: {
         status: TASK_STATUS.APPROVED,
         assigneeId,
+        assignedAt: new Date(),
       },
       include: { email: true },
     });
@@ -92,6 +115,8 @@ export class TaskService {
         details: JSON.stringify({ message: `Task approved and assigned to ${assigneeId}` }),
       },
     });
+
+    await this.recordStatusChange(id, currentTask?.status || null, TASK_STATUS.APPROVED, userId, `Assigned to ${assigneeId}`);
 
     return task;
   }
@@ -116,9 +141,21 @@ export class TaskService {
   }
 
   async updateStatus(id: string, status: string, userId: string) {
+    const currentTask = await this.prisma.task.findUnique({ where: { id } });
+    
+    // Set startedAt when status changes to IN_PROGRESS
+    const updateData: any = { status };
+    if (status === TASK_STATUS.IN_PROGRESS && !currentTask?.startedAt) {
+      updateData.startedAt = new Date();
+    }
+    // Set completedAt when status changes to DONE
+    if (status === TASK_STATUS.DONE && !currentTask?.completedAt) {
+      updateData.completedAt = new Date();
+    }
+
     const task = await this.prisma.task.update({
       where: { id },
-      data: { status },
+      data: updateData,
       include: { assignee: true },
     });
 
@@ -130,6 +167,50 @@ export class TaskService {
         details: JSON.stringify({ message: `Task status changed to ${status}` }),
       },
     });
+
+    await this.recordStatusChange(id, currentTask?.status || null, status, userId);
+
+    return task;
+  }
+
+  /**
+   * Complete a task with result and optional delay reason
+   */
+  async completeTask(
+    id: string,
+    completionResult: 'FULL' | 'PARTIAL' | 'FAILED',
+    userId: string,
+    delayReasonCode?: string,
+    delayReasonText?: string
+  ) {
+    const currentTask = await this.prisma.task.findUnique({ where: { id } });
+    
+    const task = await this.prisma.task.update({
+      where: { id },
+      data: {
+        status: TASK_STATUS.DONE,
+        completedAt: new Date(),
+        completionResult,
+        delayReasonCode,
+        delayReasonText,
+      },
+      include: { email: true, assignee: true },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        taskId: id,
+        action: `COMPLETE_${completionResult}`,
+        details: JSON.stringify({ 
+          message: `Task completed with result: ${completionResult}`,
+          delayReasonCode,
+          delayReasonText 
+        }),
+      },
+    });
+
+    await this.recordStatusChange(id, currentTask?.status || null, TASK_STATUS.DONE, userId, `Completed: ${completionResult}`);
 
     return task;
   }

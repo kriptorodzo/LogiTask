@@ -46,6 +46,7 @@ export default function Header({ isManager = false, showNotifications = true }: 
       <h1>Logistics Email Processor</h1>
       <nav className="nav">
         <Link href="/">Dashboard</Link>
+        <Link href="/reports">Reports</Link>
         {isManager && <Link href="/manager">Manager Inbox</Link>}
         {showNotifications && (
           <div style={{ position: 'relative' }} ref={dropdownRef}>
