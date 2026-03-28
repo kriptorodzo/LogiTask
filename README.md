@@ -1,5 +1,7 @@
 # Logistics Email Processor MVP
 
+Welcome! This project helps logistics teams automate their operations by automatically reading emails, extracting task requests, and assigning them to the right coordinators.
+
 An automated logistics email task management system that reads incoming emails, extracts operational requests, creates tasks, and assigns them to appropriate coordinators.
 
 This project provides a complete solution for automating logistics operations by integrating with your email system and Azure AD authentication.
@@ -14,7 +16,7 @@ This project provides a complete solution for automating logistics operations by
 
 ## Project Structure
 
-```text
+```plaintext
 ├── backend/                 # NestJS backend API
 │   ├── src/
 │   │   ├── auth/           # Azure AD authentication
@@ -36,7 +38,7 @@ This project provides a complete solution for automating logistics operations by
 │   └── package.json
 │
 └── .agents_tmp/
-    └── PLAN.md            # Implementation plan
+    └── [PLAN.md](./.agents_tmp/PLAN.md)            # Implementation plan
 ```
 
 ## Getting Started
@@ -54,7 +56,7 @@ cd backend
 npm install
 
 # Copy and configure environment variables
-cp .env.example .env
+cp [.env.example](../backend/.env.example) .env
 # Edit .env with your database and Azure AD credentials
 
 # Generate Prisma client
@@ -77,7 +79,7 @@ cd frontend
 npm install
 
 # Copy and configure environment variables
-cp .env.local.example .env.local
+cp [.env.local.example](../frontend/.env.local.example) .env.local
 # Edit .env.local with your NextAuth and backend URL
 
 # Start development server
