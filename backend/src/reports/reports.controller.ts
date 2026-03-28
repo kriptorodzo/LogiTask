@@ -1,8 +1,24 @@
-import { Controller, Get, Post, Body, Query, UseGuards, ValidationPipe, UsePipes } from '@nestjs/common';
-import { IsString, IsOptional, IsDateString, IsBoolean, IsNumberString, Max, Min } from 'class-validator';
+import { Controller, Get, Post, Body, Query, UseGuards, ValidationPipe, UsePipes, Req, BadRequestException } from '@nestjs/common';
+import { IsString, IsOptional, IsDateString, IsBoolean, IsNumberString, Max, Validate } from 'class-validator';
+import { AuthGuard } from '@nestjs/passport';
 import { CaseAggregationService } from './case-aggregation.service';
 import { ReportsQueryService } from './reports-query.service';
 import { KpiSnapshotService } from './kpi-snapshot.service';
+import { RolesGuard, Roles } from '../common/guards/roles.guard';
+
+// Helper to validate date range is within 1 year
+function validateDateRange(from?: string, to?: string): void {
+  if (!from || !to) return;
+  
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+  const now = new Date();
+  const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+  
+  if (fromDate < oneYearAgo || toDate > now || fromDate > toDate) {
+    throw new BadRequestException('Date range must be within the last year and from must be before to');
+  }
+}
 
 class RecalculateDto {
   @IsOptional()
@@ -168,6 +184,7 @@ class DelaysQueryDto {
 
 @Controller('api/reports')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+@UseGuards(AuthGuard('azure-ad'))
 export class ReportsController {
   constructor(
     private readonly caseAggregationService: CaseAggregationService,
@@ -178,9 +195,13 @@ export class ReportsController {
   /**
    * GET /api/reports/overview
    * Returns aggregated KPI metrics for the given filters
+   * Requires MANAGER or ADMIN role
    */
   @Get('overview')
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
   async getOverview(@Query() query: OverviewQueryDto) {
+    validateDateRange(query.from, query.to);
     const filters = {
       from: query.from ? new Date(query.from) : undefined,
       to: query.to ? new Date(query.to) : undefined,
@@ -193,11 +214,33 @@ export class ReportsController {
   }
 
   /**
+   * GET /api/reports/my-scorecard
+   * Returns current user's personal performance metrics
+   * Available to all authenticated users (coordinators see their own data)
+   */
+  @Get('my-scorecard')
+  async getMyScorecard(@Query() query: CoordinatorsQueryDto, @Req() req: any) {
+    validateDateRange(query.from, query.to);
+    const filters = {
+      from: query.from ? new Date(query.from) : undefined,
+      to: query.to ? new Date(query.to) : undefined,
+      roleCode: query.roleCode,
+      // Filter by current user's ID
+      coordinatorUserId: req.user?.id,
+    };
+    return this.reportsQueryService.getCoordinators(filters);
+  }
+
+  /**
    * GET /api/reports/cases
    * Returns case list with filters and pagination
+   * Requires MANAGER or ADMIN role
    */
   @Get('cases')
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
   async getCases(@Query() query: CasesQueryDto) {
+    validateDateRange(query.from, query.to);
     const filters = {
       from: query.from ? new Date(query.from) : undefined,
       to: query.to ? new Date(query.to) : undefined,
@@ -216,9 +259,13 @@ export class ReportsController {
   /**
    * GET /api/reports/otif/trend
    * Returns OTIF trend data aggregated by time period
+   * Requires MANAGER or ADMIN role
    */
   @Get('otif/trend')
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
   async getOtifTrend(@Query() query: TrendQueryDto) {
+    validateDateRange(query.from, query.to);
     const filters = {
       from: query.from ? new Date(query.from) : undefined,
       to: query.to ? new Date(query.to) : undefined,
@@ -233,9 +280,13 @@ export class ReportsController {
   /**
    * GET /api/reports/coordinators
    * Returns coordinator performance metrics
+   * Requires MANAGER or ADMIN role
    */
   @Get('coordinators')
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
   async getCoordinators(@Query() query: CoordinatorsQueryDto) {
+    validateDateRange(query.from, query.to);
     const filters = {
       from: query.from ? new Date(query.from) : undefined,
       to: query.to ? new Date(query.to) : undefined,
@@ -247,9 +298,13 @@ export class ReportsController {
   /**
    * GET /api/reports/suppliers
    * Returns supplier performance metrics
+   * Requires MANAGER or ADMIN role
    */
   @Get('suppliers')
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
   async getSuppliers(@Query() query: SuppliersQueryDto) {
+    validateDateRange(query.from, query.to);
     const filters = {
       from: query.from ? new Date(query.from) : undefined,
       to: query.to ? new Date(query.to) : undefined,
@@ -260,9 +315,13 @@ export class ReportsController {
   /**
    * GET /api/reports/locations
    * Returns location performance metrics
+   * Requires MANAGER or ADMIN role
    */
   @Get('locations')
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
   async getLocations(@Query() query: LocationsQueryDto) {
+    validateDateRange(query.from, query.to);
     const filters = {
       from: query.from ? new Date(query.from) : undefined,
       to: query.to ? new Date(query.to) : undefined,
@@ -273,9 +332,13 @@ export class ReportsController {
   /**
    * GET /api/reports/delays
    * Returns delay reason analysis
+   * Requires MANAGER or ADMIN role
    */
   @Get('delays')
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
   async getDelayReasons(@Query() query: DelaysQueryDto) {
+    validateDateRange(query.from, query.to);
     const filters = {
       from: query.from ? new Date(query.from) : undefined,
       to: query.to ? new Date(query.to) : undefined,
@@ -287,10 +350,21 @@ export class ReportsController {
   /**
    * POST /api/reports/recalculate
    * Recalculates KPI for cases in the given range and optionally rebuilds snapshots
+   * Requires MANAGER or ADMIN role
    */
   @Post('recalculate')
-  async recalculate(@Body() body: RecalculateDto) {
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
+  async recalculate(@Body() body: RecalculateDto, @Req() req: any) {
     const { from, to, caseId, rebuildSnapshots } = body;
+    
+    // Validate date range if provided
+    if (from && to) {
+      validateDateRange(from, to);
+    }
+    
+    // Log who triggered recalculate (audit)
+    console.log(`[AUDIT] User ${req.user?.email} (role: ${req.user?.role}) triggered recalculate at ${new Date().toISOString()}`);
 
     let cases: any[] = [];
 

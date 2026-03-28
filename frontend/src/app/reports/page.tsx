@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { reportsApi } from '@/lib/api';
+import Link from 'next/link';
 
 interface OverviewMetrics {
   totalCases: number;
@@ -136,6 +137,12 @@ export default function ReportsPage() {
           >
             Reset
           </button>
+          <Link
+            href="/reports/scorecard"
+            className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            My Scorecard
+          </Link>
         </div>
       </div>
 

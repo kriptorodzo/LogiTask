@@ -186,6 +186,14 @@ export const reportsApi = {
     const { data } = await apiClient.get('/api/reports/coordinators', { params });
     return data;
   },
+  getMyScorecard: async (params?: {
+    from?: string;
+    to?: string;
+    roleCode?: string;
+  }) => {
+    const { data } = await apiClient.get('/api/reports/my-scorecard', { params });
+    return data;
+  },
   getSuppliers: async (params?: {
     from?: string;
     to?: string;

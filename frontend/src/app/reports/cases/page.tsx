@@ -83,6 +83,59 @@ export default function CasesPage() {
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   }
 
+  function exportToCSV(data: any[], filename: string) {
+    if (!data || data.length === 0) return;
+    
+    // Flatten nested objects for export
+    const flatData = data.map(row => ({
+      id: row.id,
+      emailId: row.emailId,
+      classification: row.classification,
+      priority: row.priority,
+      supplierName: row.supplierName || '',
+      locationName: row.locationName || '',
+      caseDueAt: row.caseDueAt || '',
+      completedAt: row.completedAt || '',
+      isOnTime: row.isOnTime !== null ? row.isOnTime.toString() : '',
+      isInFull: row.isInFull !== null ? row.isInFull.toString() : '',
+      isOtif: row.isOtif !== null ? row.isOtif.toString() : '',
+      approvalLeadMinutes: row.approvalLeadMinutes || '',
+      executionLeadMinutes: row.executionLeadMinutes || '',
+      totalTasks: row.totalTasks,
+      completedTasks: row.completedTasks,
+      partialTasks: row.partialTasks,
+      failedTasks: row.failedTasks,
+      emailSubject: row.email?.subject || '',
+      emailSender: row.email?.sender || '',
+    }));
+    
+    // Get headers from first object
+    const headers = Object.keys(flatData[0]);
+    
+    // Build CSV content
+    const csvContent = [
+      headers.join(','),
+      ...flatData.map(row => headers.map(header => {
+        const value = row[header];
+        // Handle string values that might contain commas
+        if (typeof value === 'string' && value.includes(',')) {
+          return `"${value}"`;
+        }
+        return value;
+      }).join(','))
+    ].join('\n');
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   const totalPages = Math.ceil(total / 20);
 
   if (loading) {
@@ -165,10 +218,16 @@ export default function CasesPage() {
         >
           Reset Filters
         </button>
+        <button
+          onClick={() => exportToCSV(cases, 'cases-report')}
+          className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+        >
+          Export CSV
+        </button>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
+        <table className="w-full" id="cases-table">
           <thead className="bg-gray-50">
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Email Subject</th>

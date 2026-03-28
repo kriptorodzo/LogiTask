@@ -57,6 +57,36 @@ export default function CoordinatorsPage() {
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   }
 
+  function exportToCSV(data: any[], filename: string) {
+    if (!data || data.length === 0) return;
+    
+    // Get headers from first object
+    const headers = Object.keys(data[0]);
+    
+    // Build CSV content
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => headers.map(header => {
+        const value = row[header];
+        // Handle string values that might contain commas
+        if (typeof value === 'string' && value.includes(',')) {
+          return `"${value}"`;
+        }
+        return value;
+      }).join(','))
+    ].join('\n');
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   if (loading) {
     return (
       <div className="p-8">
@@ -119,11 +149,17 @@ export default function CoordinatorsPage() {
           >
             Reset
           </button>
+          <button
+            onClick={() => exportToCSV(coordinators, 'coordinators-report')}
+            className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Export CSV
+          </button>
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
+        <table className="w-full" id="coordinators-table">
           <thead className="bg-gray-50">
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Coordinator</th>
