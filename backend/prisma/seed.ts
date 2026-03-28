@@ -59,6 +59,38 @@ async function main() {
     },
   });
 
+  // Create pilot users (for testing without Azure AD)
+  const pilotUsers = [
+    {
+      email: 'manager@company.com',
+      displayName: 'Pilot Manager',
+      role: 'MANAGER',
+    },
+    {
+      email: 'reception@company.com',
+      displayName: 'Reception Coordinator',
+      role: 'RECEPTION_COORDINATOR',
+    },
+    {
+      email: 'delivery@company.com',
+      displayName: 'Delivery Coordinator',
+      role: 'DELIVERY_COORDINATOR',
+    },
+    {
+      email: 'distribution@company.com',
+      displayName: 'Distribution Coordinator',
+      role: 'DISTRIBUTION_COORDINATOR',
+    },
+  ];
+
+  for (const user of pilotUsers) {
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: {},
+      create: user,
+    });
+  }
+
   console.log('Seeding completed.');
 }
 

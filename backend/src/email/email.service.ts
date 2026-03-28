@@ -15,6 +15,8 @@ interface MicrosoftGraphEmail {
 @Injectable()
 export class EmailService {
   private graphClient: Client;
+  private readonly MAX_RETRIES = 3;
+  private readonly RETRY_DELAY_MS = 1000;
 
   constructor(
     private prisma: PrismaService,
@@ -29,6 +31,33 @@ export class EmailService {
         done(null, token);
       },
     });
+  }
+
+  /**
+   * Execute a function with exponential backoff retry
+   */
+  private async withRetry<T>(
+    fn: () => Promise<T>,
+    maxRetries: number = this.MAX_RETRIES,
+  ): Promise<T> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error as Error;
+        console.warn(`Attempt ${attempt}/${maxRetries} failed: ${lastError.message}`);
+        
+        if (attempt < maxRetries) {
+          const delay = this.RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+          console.log(`Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw lastError;
   }
 
   private async getAccessToken(): Promise<string> {
