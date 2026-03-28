@@ -110,12 +110,12 @@ export default function CasesPage() {
     }));
     
     // Get headers from first object
-    const headers = Object.keys(flatData[0]);
+    const headers = Object.keys(flatData[0]) as (keyof typeof flatData[0])[];
     
     // Build CSV content
     const csvContent = [
       headers.join(','),
-      ...flatData.map(row => headers.map(header => {
+      ...flatData.map((row) => headers.map((header) => {
         const value = row[header];
         // Handle string values that might contain commas
         if (typeof value === 'string' && value.includes(',')) {
