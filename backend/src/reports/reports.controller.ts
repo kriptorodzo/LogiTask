@@ -446,6 +446,7 @@ export class ReportsController {
 
     // KPI calculations
     let totalCases = 0;
+    let casesWithKpiData = 0; // Cases where we have calculated KPI (isOtif !== null)
     let otifCases = 0;
     let onTimeCases = 0;
     let inFullCases = 0;
@@ -466,13 +467,19 @@ export class ReportsController {
         statusCounts['NEW']++;
       }
 
-      // OTIF calculations
+      // Only count KPIs for cases that have KPI data calculated
+      if (c.isOtif !== null) {
+        casesWithKpiData++;
+      }
+
+      // OTIF calculations (only for cases where we have data)
       if (c.isOtif === true) otifCases++;
       if (c.isOnTime === true) onTimeCases++;
       if (c.isInFull === true) inFullCases++;
       
-      // Overdue
-      if (c.caseDueAt && new Date(c.caseDueAt) < new Date() && c.caseStatus !== 'DONE' && c.caseStatus !== 'CANCELLED') {
+      // Overdue: due date passed and not DONE/CANCELLED
+      if (c.caseDueAt && new Date(c.caseDueAt) < new Date() && 
+          !['DONE', 'CANCELLED', 'PARTIAL', 'FAILED'].includes(c.caseStatus)) {
         overdueCases++;
       }
 
@@ -487,14 +494,17 @@ export class ReportsController {
       }
     }
 
-    const otifRate = totalCases > 0 ? Math.round((otifCases / totalCases) * 100) : 0;
-    const onTimeRate = totalCases > 0 ? Math.round((onTimeCases / totalCases) * 100) : 0;
-    const inFullRate = totalCases > 0 ? Math.round((inFullCases / totalCases) * 100) : 0;
+    // Calculate rates based on cases with KPI data
+    // If no KPI data available, show 0 and don't show misleading percentages
+    const otifRate = casesWithKpiData > 0 ? Math.round((otifCases / casesWithKpiData) * 100) : 0;
+    const onTimeRate = casesWithKpiData > 0 ? Math.round((onTimeCases / casesWithKpiData) * 100) : 0;
+    const inFullRate = casesWithKpiData > 0 ? Math.round((inFullCases / casesWithKpiData) * 100) : 0;
     const avgApprovalMinutes = casesWithApprovalMinutes > 0 ? Math.round(totalApprovalMinutes / casesWithApprovalMinutes) : 0;
     const avgExecutionMinutes = casesWithExecutionMinutes > 0 ? Math.round(totalExecutionMinutes / casesWithExecutionMinutes) : 0;
 
     return {
       totalCases,
+      casesWithKpiData,
       statusCounts,
       kpis: {
         otifRate,

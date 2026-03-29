@@ -246,6 +246,11 @@ export default function ReportsOverviewV2Page() {
             {overview.totalCases}
           </div>
           <div style={{ fontSize: '18px', color: '#6b7280' }}>Вкупни Cases</div>
+          {overview.casesWithKpiData > 0 && (
+            <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>
+              {overview.casesWithKpiData} завршени (со KPIs)
+            </div>
+          )}
         </div>
 
         {/* KPI Cards */}
@@ -254,36 +259,36 @@ export default function ReportsOverviewV2Page() {
           <KpiCard 
             label="OTIF Rate" 
             value={`${overview.kpis.otifRate}%`} 
-            subLabel={`${overview.kpis.otifCases} cases`}
+            subLabel={overview.casesWithKpiData > 0 ? `${overview.kpis.otifCases} cases` : 'Нема податоци'}
             color="#10b981"
           />
           <KpiCard 
             label="On-Time Rate" 
             value={`${overview.kpis.onTimeRate}%`} 
-            subLabel={`${overview.kpis.onTimeCases} cases`}
+            subLabel={overview.casesWithKpiData > 0 ? `${overview.kpis.onTimeCases} cases` : 'Нема податоци'}
             color="#3b82f6"
           />
           <KpiCard 
             label="In-Full Rate" 
             value={`${overview.kpis.inFullRate}%`} 
-            subLabel={`${overview.kpis.inFullCases} cases`}
+            subLabel={overview.casesWithKpiData > 0 ? `${overview.kpis.inFullCases} cases` : 'Нема податоци'}
             color="#8b5cf6"
           />
           <KpiCard 
             label="Overdue Cases" 
             value={overview.kpis.overdueCases}
             subLabel="Needs attention"
-            color="#ef4444"
+            color={overview.kpis.overdueCases > 0 ? "#ef4444" : '#10b981'}
           />
           <KpiCard 
             label="Avg Approval Time" 
-            value={formatMinutes(overview.kpis.avgApprovalMinutes)}
+            value={overview.kpis.avgApprovalMinutes > 0 ? formatMinutes(overview.kpis.avgApprovalMinutes) : '-'}
             subLabel="From received to approved"
             color="#f59e0b"
           />
           <KpiCard 
             label="Avg Execution Time" 
-            value={formatMinutes(overview.kpis.avgExecutionMinutes)}
+            value={overview.kpis.avgExecutionMinutes > 0 ? formatMinutes(overview.kpis.avgExecutionMinutes) : '-'}
             subLabel="From approved to completed"
             color="#06b6d4"
           />
