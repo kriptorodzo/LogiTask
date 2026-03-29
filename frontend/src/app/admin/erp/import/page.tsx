@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import PageShell from '@/components/PageShell';
 
 interface ErpDocumentRow {
   documentType: string;
@@ -219,11 +220,11 @@ export default function ErpImportPage() {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>ERP Import</h1>
-        <p style={{ color: '#666' }}>Import ERP documents and create tasks automatically</p>
-      </div>
+    <PageShell title="ERP Import" subtitle="Import documents and create tasks">
+      <div style={{ padding: '24px' }}>
+        <div style={{ marginBottom: '24px' }}>
+          <div></div>
+        </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid #e0e0e0' }}>
@@ -535,5 +536,6 @@ export default function ErpImportPage() {
         </div>
       )}
     </div>
+    </PageShell>
   );
 }

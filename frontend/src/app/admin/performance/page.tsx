@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { performanceApi, userApi } from '@/lib/api';
+import PageShell from '@/components/PageShell';
 
 interface User {
   id: string;
@@ -151,22 +152,21 @@ export default function AdminKpiPage() {
   }
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">К управување со KPI</h1>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="flex gap-4">
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">Месец</label>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="px-3 py-2 border rounded w-40"
-            >
-              {MONTHS.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
+    <PageShell title="KPI Management" subtitle="Admin performance metrics">
+      <div className="p-6">
+        {/* Filters */}
+        <div className="bg-white p-4 rounded-lg shadow mb-6">
+          <div className="flex gap-4">
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">Месец</label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                className="px-3 py-2 border rounded w-40"
+              >
+                {MONTHS.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
             </select>
           </div>
           <div>
@@ -333,6 +333,7 @@ export default function AdminKpiPage() {
           </button>
         </div>
       </form>
-    </div>
+      </div>
+    </PageShell>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { reportsApi } from '@/lib/api';
+import PageShell from '@/components/PageShell';
 
 interface Case {
   id: string;
@@ -167,10 +168,11 @@ export default function CasesPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Case Drilldown</h1>
-        <div className="flex gap-2">
+    <PageShell title="Case Drilldown" subtitle="Detailed case view">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div></div>
+          <div className="flex gap-2">
           <input
             type="date"
             value={dateRange.from}
@@ -306,5 +308,6 @@ export default function CasesPage() {
         </div>
       )}
     </div>
+    </PageShell>
   );
 }

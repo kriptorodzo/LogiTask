@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import PageShell from '@/components/PageShell';
 
 interface RoutePlan {
   id: string;
@@ -131,32 +132,30 @@ export default function RoutePlansPage() {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '24px'
-      }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>Route Plans</h1>
-          <p style={{ color: '#666' }}>Manage distribution routes and delivery schedules</p>
-        </div>
-        <button
-          onClick={() => {
-            setFormData({
-              destinationCode: '',
-              destinationName: '',
-              routeDay: 'FRIDAY',
-              prepOffsetDays: 1,
-              active: true,
-            });
-            setEditingId(null);
-            setShowForm(true);
-          }}
-          style={{
-            padding: '12px 24px',
-            border: 'none',
+    <PageShell title="Route Plans" subtitle="Manage distribution routes">
+      <div style={{ padding: '24px' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '24px'
+        }}>
+          <div></div>
+          <button
+            onClick={() => {
+              setFormData({
+                destinationCode: '',
+                destinationName: '',
+                routeDay: 'FRIDAY',
+                prepOffsetDays: 1,
+                active: true,
+              });
+              setEditingId(null);
+              setShowForm(true);
+            }}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
             background: '#1976d2',
             color: 'white',
             borderRadius: '4px',
@@ -455,5 +454,6 @@ export default function RoutePlansPage() {
         </ul>
       </div>
     </div>
+    </PageShell>
   );
 }

@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { reportsApi } from '@/lib/api';
-import Header from '@/components/Header';
+import PageShell from '@/components/PageShell';
 
 type CaseStatus = 'NEW' | 'PROPOSED' | 'APPROVED' | 'IN_PROGRESS' | 'DONE' | 'PARTIAL' | 'FAILED' | 'CANCELLED';
 
@@ -395,11 +395,10 @@ export default function ReportsOverviewV2Page() {
   }
 
   return (
-    <div>
-      <Header isManager={true} />
+    <PageShell title="Reports Overview" subtitle="Operational analytics">
       <div className="container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h1>📊 Reports Overview v2</h1>
+          <div></div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <input
               type="date"
@@ -616,5 +615,6 @@ export default function ReportsOverviewV2Page() {
         )}
       </div>
     </div>
+    </PageShell>
   );
 }

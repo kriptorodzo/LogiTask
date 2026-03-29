@@ -116,10 +116,11 @@ export default function CoordinatorsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Coordinator Performance</h1>
-        <div className="flex gap-4 items-center">
+    <PageShell title="Coordinator Performance" subtitle="Report by coordinator">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div></div>
+          <div className="flex gap-4 items-center">
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
@@ -196,5 +197,6 @@ export default function CoordinatorsPage() {
         </table>
       </div>
     </div>
+    </PageShell>
   );
 }
