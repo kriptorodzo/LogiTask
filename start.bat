@@ -20,15 +20,17 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/4] Running Prisma migrations...
+echo [2/4] Running Prisma setup...
 cd /d "%PROJECT_DIR%backend"
 
-REM Remove old migrations if switching from PostgreSQL to SQLite
-if exist "migrations\0000_initial.migration.sql" (
-    echo Removing old PostgreSQL migrations (switching to SQLite)...
+REM Remove old migrations folder completely if exists (for clean SQLite setup)
+if exist "migrations" (
+    echo Removing old migrations folder...
     rmdir /s /q migrations 2>nul
-    del migration_lock.toml 2>nul
 )
+
+REM Recreate migration_lock.toml with sqlite (Prisma needs this)
+echo provider = "sqlite" > migration_lock.toml
 
 REM Create .env file with default SQLite if not exists
 if not exist ".env" (
@@ -40,15 +42,14 @@ if not exist ".env" (
     ) > .env
 )
 
-REM Load environment from .env
-for /f "usebackq tokens=1,* delims==" %%a in ("%PROJECT_DIR%backend\.env") do (
-    set "%%a=%%b"
+REM Delete existing dev.db for clean setup
+if exist "dev.db" (
+    del dev.db 2>nul
 )
 
-REM Set DATABASE_URL directly in command
+REM Use prisma db push instead of migrate dev (faster for local dev, no migration files needed)
 echo Using DATABASE_URL: file:./dev.db
-
-call npx prisma migrate dev --name init_sqlite
+call npx prisma db push --force-reset
 
 echo.
 echo [3/4] Seeding database...
