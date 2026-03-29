@@ -2,477 +2,267 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Suppliers and locations for realistic data
+const SUPPLIERS = [
+  'Ероглу Доставка', 'ТекстилКом', 'Мебел Македонија', 'Електро Дистрибуција',
+  'Храна Плус', 'Градежен Материјал', 'Авто Делови', 'Канцелариска Опрема',
+  'Хемикалии ДОО', 'Пластика Индустри', 'Мetal Централ', 'Стекло Сервис',
+  'Нафта ПЕТ', 'Логистика Вардар', 'Транспорт Југ', 'Пакет Експрес'
+];
+
+const LOCATIONS = [
+  'Скопје', 'Битола', 'Прилеп', 'Куманово', 'Охрид', 'Штип', 'Велес',
+  'Струга', 'Гостивар', 'Тетово', 'Кичево', 'Кавадарци', 'Кочани',
+  'Пробищип', 'Неготино', 'Македонски Брод'
+];
+
+const SENDERS = [
+  { name: 'Вработен на Скопје 1', email: 'skopje1@company.mk' },
+  { name: 'Магацин Централа', email: 'magacin@company.mk' },
+  { name: 'Клиент Битола', email: 'bitola@client.mk' },
+  { name: 'Добавувач Ероглу', email: 'eroglu@delivery.mk' },
+  { name: 'Трговски Дом Штип', email: 'trgovski@company.mk' },
+  { name: 'Логистика Охрид', email: 'ohrid@logistics.mk' },
+  { name: 'Градоначалник Прилеп', email: 'grad.prilep@mk' },
+  { name: 'Хипермаркет Велес', email: 'hiper@market.mk' },
+  { name: 'Фабрика Гостивар', email: 'fabrika@gost.mk' },
+  { name: 'Транспорт Југ', email: 'transport@jugg.mk' },
+];
+
+const REQUEST_TYPES = [
+  'INBOUND_RECEIPT', 'OUTBOUND_PREPARATION', 'OUTBOUND_DELIVERY', 'TRANSFER_DISTRIBUTION'
+];
+
+const STATUSES = ['PROPOSED', 'APPROVED', 'IN_PROGRESS', 'DONE'];
+const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
+
 async function main() {
-  console.log('Seeding database with demo data...');
+  console.log('Clearing existing data...');
+  await prisma.task.deleteMany();
+  await prisma.emailCase.deleteMany();
+  await prisma.email.deleteMany();
+  await prisma.routingRule.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.mailbox.deleteMany();
 
-  // Create default routing rules
-  const routingRules = [
-    {
-      name: 'Inbound Receipt to Reception Coordinator',
-      requestType: 'INBOUND_RECEIPT',
-      priority: 1,
-      conditions: JSON.stringify({ requestType: 'INBOUND_RECEIPT' }),
-      assigneeRole: 'RECEPTION_COORDINATOR',
-      isActive: true,
-    },
-    {
-      name: 'Outbound Preparation to Delivery Coordinator',
-      requestType: 'OUTBOUND_PREPARATION',
-      priority: 1,
-      conditions: JSON.stringify({ requestType: 'OUTBOUND_PREPARATION' }),
-      assigneeRole: 'DELIVERY_COORDINATOR',
-      isActive: true,
-    },
-    {
-      name: 'Outbound Delivery to Delivery Coordinator',
-      requestType: 'OUTBOUND_DELIVERY',
-      priority: 1,
-      conditions: JSON.stringify({ requestType: 'OUTBOUND_DELIVERY' }),
-      assigneeRole: 'DELIVERY_COORDINATOR',
-      isActive: true,
-    },
-    {
-      name: 'Transfer Distribution to Distribution Coordinator',
-      requestType: 'TRANSFER_DISTRIBUTION',
-      priority: 1,
-      conditions: JSON.stringify({ requestType: 'TRANSFER_DISTRIBUTION' }),
-      assigneeRole: 'DISTRIBUTION_COORDINATOR',
-      isActive: true,
-    },
-  ];
+  console.log('Seeding database with comprehensive demo data...');
 
-  for (const rule of routingRules) {
-    await prisma.routingRule.upsert({
-      where: { name: rule.name },
-      update: {},
-      create: rule,
-    });
-  }
-
-  // Create a default mailbox
-  const mailbox = await prisma.mailbox.upsert({
-    where: { emailAddress: 'logistics@company.com' },
-    update: {},
-    create: {
+  // Create mailbox
+  const mailbox = await prisma.mailbox.create({
+    data: {
       emailAddress: 'logistics@company.com',
       displayName: 'Logistics Inbox',
     },
   });
 
-  // Create users
-  const users = {
-    manager: await prisma.user.upsert({
-      where: { email: 'manager@company.com' },
-      update: {},
-      create: { email: 'manager@company.com', displayName: 'Manager', role: 'MANAGER' },
-    }),
-    reception: await prisma.user.upsert({
-      where: { email: 'reception@company.com' },
-      update: {},
-      create: { email: 'reception@company.com', displayName: 'Reception Coordinator', role: 'RECEPTION_COORDINATOR' },
-    }),
-    delivery: await prisma.user.upsert({
-      where: { email: 'delivery@company.com' },
-      update: {},
-      create: { email: 'delivery@company.com', displayName: 'Delivery Coordinator', role: 'DELIVERY_COORDINATOR' },
-    }),
-    distribution: await prisma.user.upsert({
-      where: { email: 'distribution@company.com' },
-      update: {},
-      create: { email: 'distribution@company.com', displayName: 'Distribution Coordinator', role: 'DISTRIBUTION_COORDINATOR' },
-    }),
-  };
+  // Create users (coordinators + manager)
+  const users = await Promise.all([
+    prisma.user.create({ data: { email: 'manager@company.com', displayName: 'Иван Петровски', role: 'MANAGER' } }),
+    prisma.user.create({ data: { email: 'reception@company.com', displayName: 'Марија Станкова', role: 'RECEPTION_COORDINATOR' } }),
+    prisma.user.create({ data: { email: 'delivery@company.com', displayName: 'Стојан Димитровски', role: 'DELIVERY_COORDINATOR' } }),
+    prisma.user.create({ data: { email: 'distribution@company.com', displayName: 'Елена Наумова', role: 'DISTRIBUTION_COORDINATOR' } }),
+  ]);
 
-  // Demo emails based on the 10 examples from backlog
-  const demoEmails = [
-    {
-      subject: 'Итна роба од Ероглу',
-      sender: 'Ероглу Доставка',
-      senderEmail: 'eroglu@delivery.mk',
-      body: 'Хитна е робата од добавувач Ероглу. Да се прими веднаш по пристигнување.',
-      receivedAt: new Date('2026-03-28T08:00:00'),
-      processingStatus: 'PROCESSED',
-      extractedSupplier: 'Eroglu',
-      extractedUrgency: 'HIGH',
-      requestType: 'INBOUND_RECEIPT',
-      extractedLocation: null,
-      extractedDeliveryDate: null,
-    },
-    {
-      subject: 'Подготовка и испорака за Штип во среда',
-      sender: 'Трговски Дом',
-      senderEmail: 'trgovski@company.mk',
-      body: 'Да се спреми роба за Штип и да се испорача во среда.',
-      receivedAt: new Date('2026-03-27T10:30:00'),
-      processingStatus: 'PROCESSED',
-      extractedSupplier: null,
-      extractedLocation: 'Stip',
-      extractedDeliveryDate: new Date('2026-03-25'), // Wednesday
-      extractedUrgency: null,
-      requestType: 'OUTBOUND_DELIVERY',
-    },
-    {
-      subject: 'Носење роба до Битола утре',
-      sender: 'Градоначалник Битола',
-      senderEmail: 'grad.bitola@mk',
-      body: 'Ве молам робата да се однесе до Битола утре до 12 часот.',
-      receivedAt: new Date('2026-03-27T14:00:00'),
-      processingStatus: 'PROCESSED',
-      extractedSupplier: null,
-      extractedLocation: 'Bitola',
-      extractedDeliveryDate: new Date('2026-03-28'), // tomorrow
-      extractedUrgency: 'HIGH',
-      requestType: 'TRANSFER_DISTRIBUTION',
-    },
-    {
-      subject: 'Прием на пратка од добавувач ТекстилКом',
-      sender: 'ТекстилКом',
-      senderEmail: 'tekstilkom@mk',
-      body: 'Денес пристигнува пратка од ТекстилКом. Да се организира прием.',
-      receivedAt: new Date('2026-03-28T07:00:00'),
-      processingStatus: 'PROCESSED',
-      extractedSupplier: 'ТекстилКом',
-      extractedUrgency: null,
-      requestType: 'INBOUND_RECEIPT',
-    },
-    {
-      subject: 'Испорака за Охрид во петок',
-      sender: 'Охрид Травел',
-      senderEmail: 'ohrid@travel.mk',
-      body: 'Да се спреми и испорача роба за Охрид во петок.',
-      receivedAt: new Date('2026-03-26T09:00:00'),
-      processingStatus: 'PROCESSED',
-      extractedSupplier: null,
-      extractedLocation: 'Ohrid',
-      extractedDeliveryDate: new Date('2026-03-27'), // Friday
-      extractedUrgency: null,
-      requestType: 'OUTBOUND_DELIVERY',
-    },
-    {
-      subject: 'Внатрешен трансфер до магацин Скопје 2',
-      sender: 'Магацин Скопје',
-      senderEmail: 'warehouse2@company.mk',
-      body: 'Потребен е трансфер на палети до магацин Скопје 2 до крај на ден.',
-      receivedAt: new Date('2026-03-28T11:00:00'),
-      processingStatus: 'PROCESSED',
-      extractedSupplier: null,
-      extractedLocation: 'Skopje Warehouse 2',
-      extractedDeliveryDate: new Date('2026-03-28'), // today end of day
-      extractedUrgency: 'HIGH',
-      requestType: 'TRANSFER_DISTRIBUTION',
-    },
-    {
-      subject: 'Итна подготовка за испорака',
-      sender: 'Вработен',
-      senderEmail: 'vraboten@company.mk',
-      body: 'Итно да се спреми роба за клиентот. Испораката е утре сабајле.',
-      receivedAt: new Date('2026-03-28T12:00:00'),
-      processingStatus: 'PROCESSED',
-      extractedSupplier: null,
-      extractedLocation: null,
-      extractedDeliveryDate: new Date('2026-03-29'), // tomorrow morning
-      extractedUrgency: 'HIGH',
-      requestType: 'OUTBOUND_DELIVERY',
-    },
-    {
-      subject: 'Недостигаат детали за испорака',
-      sender: 'Клиент',
-      senderEmail: 'client@company.mk',
-      body: 'Да се спреми пратката и да се испрати како што договоривме.',
-      receivedAt: new Date('2026-03-28T09:30:00'),
-      processingStatus: 'PENDING',
-      extractedSupplier: null,
-      extractedLocation: null,
-      extractedDeliveryDate: null,
-      extractedUrgency: null,
-      requestType: 'UNCLASSIFIED',
-    },
-    {
-      subject: 'Прием и последователна дистрибуција',
-      sender: 'Ероглу Доставка',
-      senderEmail: 'eroglu@delivery.mk',
-      body: 'Утре пристигнува роба од Ероглу, а во четврток треба да се испорача до Куманово.',
-      receivedAt: new Date('2026-03-26T16:00:00'),
-      processingStatus: 'PROCESSED',
-      extractedSupplier: 'Eroglu',
-      extractedLocation: 'Kumanovo',
-      extractedDeliveryDate: new Date('2026-03-26'), // Thursday
-      extractedUrgency: null,
-      requestType: 'OUTBOUND_DELIVERY',
-    },
-    {
-      subject: 'Проблем со адреса за достава',
-      sender: 'Проблем',
-      senderEmail: 'problem@company.mk',
-      body: 'Да се испорача роба утре, но адресата ќе ја потврдиме дополнително.',
-      receivedAt: new Date('2026-03-28T10:00:00'),
-      processingStatus: 'PENDING',
-      extractedSupplier: null,
-      extractedLocation: null,
-      extractedDeliveryDate: new Date('2026-03-29'), // tomorrow
-      extractedUrgency: null,
-      requestType: 'UNCLASSIFIED',
-    },
+  const [manager, reception, delivery, distribution] = users;
+
+  // Create routing rules
+  const routingRules = [
+    { name: 'Inbound to Reception', requestType: 'INBOUND_RECEIPT', assigneeRole: 'RECEPTION_COORDINATOR' },
+    { name: 'Outbound Prep to Delivery', requestType: 'OUTBOUND_PREPARATION', assigneeRole: 'DELIVERY_COORDINATOR' },
+    { name: 'Outbound Delivery to Delivery', requestType: 'OUTBOUND_DELIVERY', assigneeRole: 'DELIVERY_COORDINATOR' },
+    { name: 'Transfer to Distribution', requestType: 'TRANSFER_DISTRIBUTION', assigneeRole: 'DISTRIBUTION_COORDINATOR' },
   ];
 
-  // Create emails and tasks
-  const createdEmails: string[] = [];
-  
-  for (const emailData of demoEmails) {
-    const email = await prisma.email.create({
+  for (const rule of routingRules) {
+    await prisma.routingRule.create({
       data: {
-        ...emailData,
-        mailboxId: mailbox.id,
-        bodyPlainText: emailData.body,
+        name: rule.name,
+        requestType: rule.requestType,
+        priority: 1,
+        conditions: JSON.stringify({ requestType: rule.requestType }),
+        assigneeRole: rule.assigneeRole,
+        isActive: true,
       },
     });
-    createdEmails.push(email.id);
+  }
 
-    // Create email case
-    await prisma.emailCase.create({
-      data: {
-        emailId: email.id,
-        classification: emailData.requestType !== 'UNCLASSIFIED' ? emailData.requestType : null,
-        priority: emailData.extractedUrgency as any,
-        supplierName: emailData.extractedSupplier,
-        locationName: emailData.extractedLocation,
-        deliveryDueAt: emailData.extractedDeliveryDate,
-        caseDueAt: emailData.extractedDeliveryDate,
-      },
-    });
+  // Generate 7 days of data (current week)
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
 
-    // Create tasks for processed emails
-    if (emailData.processingStatus === 'PROCESSED' && emailData.requestType !== 'UNCLASSIFIED') {
-      const tasks = getTasksForEmail(email.id, emailData);
-      for (const task of tasks) {
-        await prisma.task.create({ data: task });
+  console.log(`Generating data from ${startOfWeek.toISOString()} for 7 days...`);
+
+  let emailCount = 0;
+  let taskCount = 0;
+
+  // Daily template for emails per coordinator
+  const coordinatorEmails = {
+    reception: [
+      'Прием на пратка од {supplier}',
+      'Итна приемка - {supplier}',
+      'Проверка на квалитет - {supplier}',
+      'Раздолжување на возило',
+      'Внесување во магацин',
+      'Документација за прием',
+      'Најава на добавувач',
+      'Проверка на количини',
+      'Складирање на артикли',
+      'Потврда за прием',
+    ],
+    delivery: [
+      'Подготовка на возило за {location}',
+      'Утоварување на роба',
+      'Планирање на рута до {location}',
+      'Пријава за испорака',
+      'Проверка на пратката',
+      'Потврда за клиент',
+      'Документација за испорака',
+      'Враќање на возило',
+      'Пополнување на извештај',
+      'Завршна проверка',
+    ],
+    distribution: [
+      'Дистрибуција до {location}',
+      'Планирање на пакети',
+      'Рута за {location}',
+      'Координација со магацин',
+      'Испорака на пратки',
+      'Потврда за примач',
+      'Ажурирање на статус',
+      'Финална дистрибуција',
+      'Затворање на налог',
+      'Извештај за денот',
+    ],
+  };
+
+  for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+    const currentDate = new Date(startOfWeek);
+    currentDate.setDate(startOfWeek.getDate() + dayOffset);
+    
+    const dayName = ['Понеделник', 'Вторник', 'Среда', 'Четврток', 'Петок', 'Сабота', 'Недела'][dayOffset];
+
+    console.log(`Creating data for ${dayName} (${currentDate.toISOString().split('T')[0]})...`);
+
+    // Create 10 emails per day
+    for (let i = 0; i < 10; i++) {
+      const supplier = SUPPLIERS[Math.floor(Math.random() * SUPPLIERS.length)];
+      const location = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
+      const sender = SENDERS[Math.floor(Math.random() * SENDERS.length)];
+      const requestType = REQUEST_TYPES[Math.floor(Math.random() * REQUEST_TYPES.length)];
+      const priority = PRIORITIES[Math.floor(Math.random() * PRIORITIES.length)];
+      
+      // Random hour between 6:00 and 18:00
+      const hour = 6 + Math.floor(Math.random() * 12);
+      const emailTime = new Date(currentDate);
+      emailTime.setHours(hour, Math.floor(Math.random() * 60), 0);
+
+      const email = await prisma.email.create({
+        data: {
+          subject: `Логистика ${dayName} - ${supplier}`,
+          sender: sender.name,
+          senderEmail: sender.email,
+          body: `Бараж за ${requestType.split('_')[1]}.\n\nПартнер: ${supplier}\nЛокација: ${location}\nПриоритет: ${priority}\n\nОчекувано време на пристигнување: ${emailTime.toISOString()}`,
+          receivedAt: emailTime,
+          processingStatus: 'PROCESSED',
+          mailboxId: mailbox.id,
+          bodyPlainText: `Бараж за ${requestType.split('_')[1]}. Партнер: ${supplier}, Локација: ${location}`,
+          extractedSupplier: supplier,
+          extractedLocation: location,
+          extractedDeliveryDate: new Date(currentDate.getTime() + 24 * 60 * 60 * 1000),
+          extractedUrgency: priority,
+          requestType: requestType,
+        },
+      });
+      emailCount++;
+
+      // Create email case
+      const emailCase = await prisma.emailCase.create({
+        data: {
+          emailId: email.id,
+          classification: requestType,
+          priority: priority,
+          supplierName: supplier,
+          locationName: location,
+          deliveryDueAt: new Date(currentDate.getTime() + 24 * 60 * 60 * 1000),
+          caseDueAt: new Date(currentDate.getTime() + 24 * 60 * 60 * 1000),
+        },
+      });
+
+      // Create tasks for each coordinator (2 tasks per email)
+      const coordinators = [
+        { user: reception, types: ['INBOUND_RECEIPT'] },
+        { user: delivery, types: ['OUTBOUND_PREPARATION', 'OUTBOUND_DELIVERY'] },
+        { user: distribution, types: ['TRANSFER_DISTRIBUTION'] },
+      ];
+
+      // Only create tasks for relevant coordinators based on request type
+      const relevantCoordinators = coordinators.filter(c => 
+        c.types.some(t => requestType.includes(t))
+      );
+
+      // Add all coordinators for demo purposes
+      for (const coord of coordinators) {
+        const taskStatuses = dayOffset < 4 
+          ? ['APPROVED', 'IN_PROGRESS', 'DONE'] // Past days have completed tasks
+          : ['PROPOSED', 'APPROVED', 'IN_PROGRESS']; // Recent days have active tasks
+
+        const taskStatus = taskStatuses[Math.floor(Math.random() * taskStatuses.length)];
+        
+        // Task due time varies by coordinator
+        const taskHour = 8 + Math.floor(Math.random() * 8);
+        const taskTime = new Date(currentDate);
+        taskTime.setHours(taskHour, 0, 0);
+
+        const task = await prisma.task.create({
+          data: {
+            emailId: email.id,
+            title: `Задача ${coord.user.displayName} - ${dayName}`,
+            requestType: requestType,
+            status: taskStatus,
+            dueDate: taskTime,
+            isRequiredForCase: true,
+            assignedAt: taskStatus !== 'PROPOSED' ? taskTime : null,
+            startedAt: taskStatus === 'IN_PROGRESS' || taskStatus === 'DONE' 
+              ? new Date(taskTime.getTime() + 30 * 60 * 1000) : null,
+            completedAt: taskStatus === 'DONE' 
+              ? new Date(taskTime.getTime() + 60 * 60 * 1000 * (2 + Math.random() * 2)) : null,
+            completionResult: taskStatus === 'DONE' ? (Math.random() > 0.1 ? 'FULL' : 'PARTIAL') : null,
+          },
+        });
+        taskCount++;
+      }
+
+      // Create historical OTIF data for reports (for past 3 days)
+      if (dayOffset < 4 && Math.random() > 0.5) {
+        await prisma.emailCase.update({
+          where: { id: emailCase.id },
+          data: {
+            approvedAt: new Date(currentDate.getTime() + 2 * 60 * 60 * 1000),
+            completedAt: new Date(currentDate.getTime() + 20 * 60 * 60 * 1000),
+            isOnTime: Math.random() > 0.2,
+            isInFull: Math.random() > 0.1,
+            isOtif: Math.random() > 0.3,
+            approvalLeadMinutes: Math.floor(Math.random() * 120) + 30,
+            executionLeadMinutes: Math.floor(Math.random() * 180) + 60,
+            totalTasks: 2 + Math.floor(Math.random() * 3),
+            completedTasks: 2 + Math.floor(Math.random() * 3),
+          },
+        });
       }
     }
   }
 
-  console.log(`Created ${createdEmails.length} demo emails`);
-
-  // Create some additional historical data for reports
-  await createHistoricalData(prisma, users, mailbox);
-
-  console.log('Seeding completed.');
-}
-
-function getTasksForEmail(emailId: string, emailData: any): any[] {
-  const tasks: any[] = [];
-  const today = new Date();
-
-  switch (emailData.subject) {
-    case 'Итна роба од Ероглу':
-      tasks.push({
-        emailId,
-        title: 'Прием на роба од Ероглу',
-        requestType: 'INBOUND_RECEIPT',
-        status: 'PROPOSED',
-        dueDate: today,
-        isRequiredForCase: true,
-        assignedAt: null,
-        startedAt: null,
-        completedAt: null,
-      });
-      break;
-
-    case 'Подготовка и испорака за Штип во среда':
-      tasks.push({
-        emailId,
-        title: 'Подготовка на роба за Штип',
-        requestType: 'OUTBOUND_PREPARATION',
-        status: 'PROPOSED',
-        dueDate: new Date('2026-03-24'),
-        isRequiredForCase: true,
-      });
-      tasks.push({
-        emailId,
-        title: 'Испорака на роба до Штип',
-        requestType: 'OUTBOUND_DELIVERY',
-        status: 'PROPOSED',
-        dueDate: new Date('2026-03-25'),
-        isRequiredForCase: true,
-      });
-      break;
-
-    case 'Носење роба до Битола утре':
-      tasks.push({
-        emailId,
-        title: 'Дистрибуција до Битола',
-        requestType: 'TRANSFER_DISTRIBUTION',
-        status: 'PROPOSED',
-        dueDate: new Date('2026-03-28T12:00:00'),
-        isRequiredForCase: true,
-      });
-      break;
-
-    case 'Прием на пратка од добавувач ТекстилКом':
-      tasks.push({
-        emailId,
-        title: 'Прием на пратка од ТекстилКом',
-        requestType: 'INBOUND_RECEIPT',
-        status: 'PROPOSED',
-        dueDate: today,
-        isRequiredForCase: true,
-      });
-      break;
-
-    case 'Испорака за Охрид во петок':
-      tasks.push({
-        emailId,
-        title: 'Подготовка за Охрид',
-        requestType: 'OUTBOUND_PREPARATION',
-        status: 'PROPOSED',
-        dueDate: new Date('2026-03-26'),
-        isRequiredForCase: true,
-      });
-      tasks.push({
-        emailId,
-        title: 'Дистрибуција за Охрид',
-        requestType: 'OUTBOUND_DELIVERY',
-        status: 'PROPOSED',
-        dueDate: new Date('2026-03-27'),
-        isRequiredForCase: true,
-      });
-      break;
-
-    case 'Внатрешен трансфер до магацин Скопје 2':
-      tasks.push({
-        emailId,
-        title: 'Трансфер до магацин Скопје 2',
-        requestType: 'TRANSFER_DISTRIBUTION',
-        status: 'PROPOSED',
-        dueDate: new Date('2026-03-28T18:00:00'),
-        isRequiredForCase: true,
-      });
-      break;
-
-    case 'Итна подготовка за испорака':
-      tasks.push({
-        emailId,
-        title: 'Итна подготовка на роба',
-        requestType: 'OUTBOUND_PREPARATION',
-        status: 'PROPOSED',
-        dueDate: today,
-        isRequiredForCase: true,
-      });
-      tasks.push({
-        emailId,
-        title: 'Испорака до клиент',
-        requestType: 'OUTBOUND_DELIVERY',
-        status: 'PROPOSED',
-        dueDate: new Date('2026-03-29T09:00:00'),
-        isRequiredForCase: true,
-      });
-      break;
-
-    case 'Прием и последователна дистрибуција':
-      tasks.push({
-        emailId,
-        title: 'Прием на роба од Ероглу',
-        requestType: 'INBOUND_RECEIPT',
-        status: 'APPROVED',
-        dueDate: new Date('2026-03-26'),
-        isRequiredForCase: true,
-      });
-      tasks.push({
-        emailId,
-        title: 'Подготовка за Куманово',
-        requestType: 'OUTBOUND_PREPARATION',
-        status: 'APPROVED',
-        dueDate: new Date('2026-03-25'),
-        isRequiredForCase: true,
-      });
-      tasks.push({
-        emailId,
-        title: 'Дистрибуција до Куманово',
-        requestType: 'OUTBOUND_DELIVERY',
-        status: 'APPROVED',
-        dueDate: new Date('2026-03-26'),
-        isRequiredForCase: true,
-      });
-      break;
-  }
-
-  return tasks;
-}
-
-async function createHistoricalData(prisma: PrismaClient, users: any, mailbox: any) {
-  // Create some completed cases with OTIF data
-  const historicalEmails = [
-    {
-      subject: 'Испорака до Велес - Завршена',
-      sender: 'Клиент Велес',
-      senderEmail: 'veles@client.mk',
-      body: 'Робата беше испорачена успешно.',
-      receivedAt: new Date('2026-03-20T08:00:00'),
-      processingStatus: 'PROCESSED',
-      requestType: 'OUTBOUND_DELIVERY',
-      extractedLocation: 'Veles',
-      extractedDeliveryDate: new Date('2026-03-22'),
-    },
-    {
-      subject: 'Прием од Прилеп - Завршен',
-      sender: 'Прилеп Индустри',
-      senderEmail: 'prilep@industry.mk',
-      body: 'Прием на роба од Прилеп.',
-      receivedAt: new Date('2026-03-18T10:00:00'),
-      processingStatus: 'PROCESSED',
-      requestType: 'INBOUND_RECEIPT',
-      extractedSupplier: 'Прилеп Индустри',
-      extractedDeliveryDate: new Date('2026-03-18'),
-    },
-  ];
-
-  for (const emailData of historicalEmails) {
-    const email = await prisma.email.create({
-      data: {
-        ...emailData,
-        mailboxId: mailbox.id,
-        bodyPlainText: emailData.body,
-      },
-    });
-
-    await prisma.emailCase.create({
-      data: {
-        emailId: email.id,
-        classification: emailData.requestType,
-        priority: 'MEDIUM',
-        supplierName: emailData.extractedSupplier || null,
-        locationName: emailData.extractedLocation || null,
-        deliveryDueAt: emailData.extractedDeliveryDate,
-        caseDueAt: emailData.extractedDeliveryDate,
-        approvedAt: new Date('2026-03-19T10:00:00'),
-        completedAt: new Date('2026-03-22T15:00:00'),
-        isOnTime: true,
-        isInFull: true,
-        isOtif: true,
-        approvalLeadMinutes: 60,
-        executionLeadMinutes: 2880,
-        totalTasks: 2,
-        completedTasks: 2,
-      },
-    });
-
-    // Create tasks for historical emails
-    await prisma.task.create({
-      data: {
-        emailId: email.id,
-        title: 'Историска задача 1',
-        requestType: emailData.requestType,
-        status: 'DONE',
-        dueDate: emailData.extractedDeliveryDate,
-        isRequiredForCase: true,
-        assignedAt: new Date('2026-03-19T10:00:00'),
-        startedAt: new Date('2026-03-19T11:00:00'),
-        completedAt: new Date('2026-03-20T14:00:00'),
-        completionResult: 'FULL',
-      },
-    });
-  }
-
-  console.log('Created historical data for reports');
+  console.log(`\n✅ Seeding completed!`);
+  console.log(`   - Created ${emailCount} emails`);
+  console.log(`   - Created ${taskCount} tasks`);
+  console.log(`   - Created ${users.length} users`);
+  console.log(`   - Created ${routingRules.length} routing rules`);
+  console.log(`\nUsers:`);
+  console.log(`   - Manager: manager@company.com`);
+  console.log(`   - Reception: reception@company.com`);
+  console.log(`   - Delivery: delivery@company.com`);
+  console.log(`   - Distribution: distribution@company.com`);
 }
 
 main()
