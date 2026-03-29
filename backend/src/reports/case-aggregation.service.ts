@@ -490,4 +490,29 @@ export class CaseAggregationService {
 
     return { cases, total };
   }
+
+  /**
+   * Get all cases for overview without pagination
+   */
+  async getAllCasesForOverview(where: any = {}): Promise<any[]> {
+    return this.prisma.emailCase.findMany({
+      where,
+      include: {
+        email: {
+          select: {
+            subject: true,
+            sender: true,
+            receivedAt: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get count of cases matching filter
+   */
+  async getCasesCount(where: any = {}): Promise<number> {
+    return this.prisma.emailCase.count({ where });
+  }
 }

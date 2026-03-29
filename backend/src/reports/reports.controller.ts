@@ -401,4 +401,160 @@ export class ReportsController {
       snapshotsRebuilt: rebuildSnapshots || false,
     };
   }
+
+  /**
+   * GET /api/reports/overview-v2
+   * Returns dashboard overview with case status breakdown and KPI metrics
+   * Requires MANAGER or ADMIN role
+   */
+  @Get('overview-v2')
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
+  async getOverviewV2(@Query() query: OverviewQueryDto) {
+    const filters = {
+      from: query.from ? new Date(query.from) : undefined,
+      to: query.to ? new Date(query.to) : undefined,
+      roleCode: query.roleCode,
+      supplierName: query.supplierName,
+      locationName: query.locationName,
+      coordinatorUserId: query.coordinatorUserId,
+    };
+
+    // Get all cases for the period (or all if no dates)
+    const where: any = {};
+    if (filters.from || filters.to) {
+      where.completedAt = {};
+      if (filters.from) where.completedAt.gte = filters.from;
+      if (filters.to) where.completedAt.lte = filters.to;
+    }
+    if (filters.supplierName) where.supplierName = filters.supplierName;
+    if (filters.locationName) where.locationName = filters.locationName;
+
+    const allCases = await this.caseAggregationService.getAllCasesForOverview(where);
+    
+    // Count by status
+    const statusCounts: Record<string, number> = {
+      NEW: 0,
+      PROPOSED: 0,
+      APPROVED: 0,
+      IN_PROGRESS: 0,
+      DONE: 0,
+      PARTIAL: 0,
+      FAILED: 0,
+      CANCELLED: 0,
+    };
+
+    // KPI calculations
+    let totalCases = 0;
+    let otifCases = 0;
+    let onTimeCases = 0;
+    let inFullCases = 0;
+    let overdueCases = 0;
+    let totalApprovalMinutes = 0;
+    let totalExecutionMinutes = 0;
+    let casesWithApprovalMinutes = 0;
+    let casesWithExecutionMinutes = 0;
+
+    for (const c of allCases) {
+      totalCases++;
+      
+      // Count by status
+      const status = c.caseStatus || 'NEW';
+      if (statusCounts[status] !== undefined) {
+        statusCounts[status]++;
+      } else {
+        statusCounts['NEW']++;
+      }
+
+      // OTIF calculations
+      if (c.isOtif === true) otifCases++;
+      if (c.isOnTime === true) onTimeCases++;
+      if (c.isInFull === true) inFullCases++;
+      
+      // Overdue
+      if (c.caseDueAt && new Date(c.caseDueAt) < new Date() && c.caseStatus !== 'DONE' && c.caseStatus !== 'CANCELLED') {
+        overdueCases++;
+      }
+
+      // Lead times
+      if (c.approvalLeadMinutes && c.approvalLeadMinutes > 0) {
+        totalApprovalMinutes += c.approvalLeadMinutes;
+        casesWithApprovalMinutes++;
+      }
+      if (c.executionLeadMinutes && c.executionLeadMinutes > 0) {
+        totalExecutionMinutes += c.executionLeadMinutes;
+        casesWithExecutionMinutes++;
+      }
+    }
+
+    const otifRate = totalCases > 0 ? Math.round((otifCases / totalCases) * 100) : 0;
+    const onTimeRate = totalCases > 0 ? Math.round((onTimeCases / totalCases) * 100) : 0;
+    const inFullRate = totalCases > 0 ? Math.round((inFullCases / totalCases) * 100) : 0;
+    const avgApprovalMinutes = casesWithApprovalMinutes > 0 ? Math.round(totalApprovalMinutes / casesWithApprovalMinutes) : 0;
+    const avgExecutionMinutes = casesWithExecutionMinutes > 0 ? Math.round(totalExecutionMinutes / casesWithExecutionMinutes) : 0;
+
+    return {
+      totalCases,
+      statusCounts,
+      kpis: {
+        otifRate,
+        otifCases,
+        onTimeRate,
+        onTimeCases,
+        inFullRate,
+        inFullCases,
+        overdueCases,
+        avgApprovalMinutes,
+        avgExecutionMinutes,
+      },
+      filters: {
+        from: query.from,
+        to: query.to,
+        supplierName: query.supplierName,
+        locationName: query.locationName,
+      },
+    };
+  }
+
+  /**
+   * GET /api/reports/cases-by-status
+   * Returns cases filtered by specific status for drilldown
+   * Requires MANAGER or ADMIN role
+   */
+  @Get('cases-by-status')
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
+  async getCasesByStatus(@Query() query: any) {
+    const status = query.status;
+    const page = parseInt(query.page) || 1;
+    const pageSize = parseInt(query.pageSize) || 20;
+    const skip = (page - 1) * pageSize;
+
+    const where: any = {};
+    if (status) where.caseStatus = status;
+    if (query.from || query.to) {
+      where.completedAt = {};
+      if (query.from) where.completedAt.gte = new Date(query.from);
+      if (query.to) where.completedAt.lte = new Date(query.to);
+    }
+    if (query.supplierName) where.supplierName = query.supplierName;
+    if (query.locationName) where.locationName = query.locationName;
+
+    const [cases, total] = await Promise.all([
+      this.caseAggregationService.getCases({
+        ...where,
+        page,
+        pageSize,
+      }),
+      this.caseAggregationService.getCasesCount(where),
+    ]);
+
+    return {
+      cases: cases.cases,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }
 }

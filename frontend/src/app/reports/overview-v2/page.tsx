@@ -1,0 +1,392 @@
+'use client';
+
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { reportsApi } from '@/lib/api';
+import Header from '@/components/Header';
+
+type CaseStatus = 'NEW' | 'PROPOSED' | 'APPROVED' | 'IN_PROGRESS' | 'DONE' | 'PARTIAL' | 'FAILED' | 'CANCELLED';
+
+const STATUS_CONFIG: Record<CaseStatus, { label: string; color: string; bgColor: string; icon: string }> = {
+  NEW: { label: 'Нов', color: '#6b7280', bgColor: '#f3f4f6', icon: '📧' },
+  PROPOSED: { label: 'Предложен', color: '#f59e0b', bgColor: '#fef3c7', icon: '⏳' },
+  APPROVED: { label: 'Одобрен', color: '#3b82f6', bgColor: '#dbeafe', icon: '✅' },
+  IN_PROGRESS: { label: 'Во тек', color: '#8b5cf6', bgColor: '#ede9fe', icon: '🔄' },
+  DONE: { label: 'Завршен', color: '#10b981', bgColor: '#d1fae5', icon: '🎉' },
+  PARTIAL: { label: 'Делумен', color: '#f97316', bgColor: '#ffedd5', icon: '⚠️' },
+  FAILED: { label: 'Неуспешен', color: '#ef4444', bgColor: '#fee2e2', icon: '❌' },
+  CANCELLED: { label: 'Откажан', color: '#6b7280', bgColor: '#f3f4f6', icon: '🚫' },
+};
+
+interface KpiCardProps {
+  label: string;
+  value: string | number;
+  subLabel?: string;
+  color?: string;
+  onClick?: () => void;
+}
+
+function KpiCard({ label, value, subLabel, color, onClick }: KpiCardProps) {
+  return (
+    <div 
+      className="card" 
+      style={{ 
+        textAlign: 'center', 
+        cursor: onClick ? 'pointer' : 'default',
+        border: '2px solid transparent',
+        transition: 'all 0.2s',
+      }}
+      onClick={onClick}
+      onMouseEnter={(e) => onClick && (e.currentTarget.style.borderColor = color || '#3b82f6')}
+      onMouseLeave={(e) => onClick && (e.currentTarget.style.borderColor = 'transparent')}
+    >
+      <div style={{ fontSize: '28px', fontWeight: 'bold', color: color || '#1f2937' }}>
+        {value}
+      </div>
+      <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{label}</div>
+      {subLabel && <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>{subLabel}</div>}
+    </div>
+  );
+}
+
+interface StatusCardProps {
+  status: CaseStatus;
+  count: number;
+  onClick: () => void;
+}
+
+function StatusCard({ status, count, onClick }: StatusCardProps) {
+  const config = STATUS_CONFIG[status];
+  return (
+    <div 
+      className="card" 
+      style={{ 
+        cursor: 'pointer',
+        background: config.bgColor,
+        border: `2px solid ${config.color}`,
+        transition: 'all 0.2s',
+      }}
+      onClick={onClick}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = `0 4px 12px ${config.color}40`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'none';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
+      <div style={{ fontSize: '32px', marginBottom: '8px' }}>{config.icon}</div>
+      <div style={{ fontSize: '28px', fontWeight: 'bold', color: config.color }}>
+        {count}
+      </div>
+      <div style={{ fontSize: '14px', color: config.color }}>{config.label}</div>
+    </div>
+  );
+}
+
+interface Case {
+  id: string;
+  caseStatus: string;
+  caseDueAt: string | null;
+  completedAt: string | null;
+  isOtif: boolean | null;
+  isOnTime: boolean | null;
+  isInFull: boolean | null;
+  email: {
+    subject: string;
+    sender: string;
+    receivedAt: string;
+  };
+  supplierName: string | null;
+  locationName: string | null;
+  totalTasks: number;
+  completedTasks: number;
+}
+
+export default function ReportsOverviewV2Page() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [overview, setOverview] = useState<any>(null);
+  const [selectedStatus, setSelectedStatus] = useState<CaseStatus | null>(null);
+  const [cases, setCases] = useState<Case[]>([]);
+  const [casesLoading, setCasesLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [dateRange, setDateRange] = useState<{ from?: string; to?: string }>({});
+
+  const userRole = (session?.user as any)?.role;
+  const isManager = userRole === 'MANAGER' || userRole === 'ADMIN';
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/api/auth/signin');
+    } else if (status === 'authenticated' && !isManager) {
+      router.push('/');
+    }
+  }, [status, router, isManager]);
+
+  useEffect(() => {
+    if (session && isManager) {
+      loadOverview();
+    }
+  }, [session, isManager, dateRange]);
+
+  async function loadOverview() {
+    try {
+      setLoading(true);
+      const data = await reportsApi.getOverviewV2(dateRange);
+      setOverview(data);
+    } catch (error) {
+      console.error('Failed to load overview:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadCasesByStatus(status: CaseStatus) {
+    try {
+      setCasesLoading(true);
+      const data = await reportsApi.getCasesByStatus({
+        status,
+        from: dateRange.from,
+        to: dateRange.to,
+        page,
+        pageSize: 20,
+      });
+      setCases(data.cases);
+      setTotalPages(data.totalPages);
+      setSelectedStatus(status);
+    } catch (error) {
+      console.error('Failed to load cases:', error);
+    } finally {
+      setCasesLoading(false);
+    }
+  }
+
+  function closeDrilldown() {
+    setSelectedStatus(null);
+    setCases([]);
+    setPage(1);
+  }
+
+  function formatMinutes(minutes: number): string {
+    if (minutes < 60) return `${minutes}min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  }
+
+  function formatDate(dateStr: string | null): string {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('mk-MK');
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <Header isManager={true} />
+        <div className="container">
+          <div className="empty-state">
+            <h3>Loading...</h3>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!overview) {
+    return (
+      <div>
+        <Header isManager={true} />
+        <div className="container">
+          <div className="empty-state">
+            <h3>No data available</h3>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Header isManager={true} />
+      <div className="container">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h1>📊 Reports Overview v2</h1>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <input
+              type="date"
+              className="form-input"
+              value={dateRange.from || ''}
+              onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
+              style={{ padding: '8px' }}
+            />
+            <span>до</span>
+            <input
+              type="date"
+              className="form-input"
+              value={dateRange.to || ''}
+              onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
+              style={{ padding: '8px' }}
+            />
+            {(dateRange.from || dateRange.to) && (
+              <button className="btn btn-secondary" onClick={() => setDateRange({})}>
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Total Cases */}
+        <div className="card" style={{ marginBottom: '24px', textAlign: 'center', padding: '24px' }}>
+          <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#1f2937' }}>
+            {overview.totalCases}
+          </div>
+          <div style={{ fontSize: '18px', color: '#6b7280' }}>Вкупни Cases</div>
+        </div>
+
+        {/* KPI Cards */}
+        <h2 style={{ marginBottom: '16px' }}>📈 KPI Metrics</h2>
+        <div className="grid grid-3" style={{ marginBottom: '24px' }}>
+          <KpiCard 
+            label="OTIF Rate" 
+            value={`${overview.kpis.otifRate}%`} 
+            subLabel={`${overview.kpis.otifCases} cases`}
+            color="#10b981"
+          />
+          <KpiCard 
+            label="On-Time Rate" 
+            value={`${overview.kpis.onTimeRate}%`} 
+            subLabel={`${overview.kpis.onTimeCases} cases`}
+            color="#3b82f6"
+          />
+          <KpiCard 
+            label="In-Full Rate" 
+            value={`${overview.kpis.inFullRate}%`} 
+            subLabel={`${overview.kpis.inFullCases} cases`}
+            color="#8b5cf6"
+          />
+          <KpiCard 
+            label="Overdue Cases" 
+            value={overview.kpis.overdueCases}
+            subLabel="Needs attention"
+            color="#ef4444"
+          />
+          <KpiCard 
+            label="Avg Approval Time" 
+            value={formatMinutes(overview.kpis.avgApprovalMinutes)}
+            subLabel="From received to approved"
+            color="#f59e0b"
+          />
+          <KpiCard 
+            label="Avg Execution Time" 
+            value={formatMinutes(overview.kpis.avgExecutionMinutes)}
+            subLabel="From approved to completed"
+            color="#06b6d4"
+          />
+        </div>
+
+        {/* Case Status Breakdown */}
+        <h2 style={{ marginBottom: '16px' }}>📋 Case Status Breakdown</h2>
+        <div className="grid grid-4" style={{ marginBottom: '24px' }}>
+          {(Object.keys(STATUS_CONFIG) as CaseStatus[]).map((status) => (
+            <StatusCard
+              key={status}
+              status={status}
+              count={overview.statusCounts[status] || 0}
+              onClick={() => loadCasesByStatus(status)}
+            />
+          ))}
+        </div>
+
+        {/* Drilldown Panel */}
+        {selectedStatus && (
+          <div className="card" style={{ marginTop: '24px', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0 }}>
+                {STATUS_CONFIG[selectedStatus].icon} Cases: {STATUS_CONFIG[selectedStatus].label}
+              </h2>
+              <button className="btn btn-secondary" onClick={closeDrilldown}>
+                ✕ Close
+              </button>
+            </div>
+
+            {casesLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
+            ) : cases.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                No cases found
+              </div>
+            ) : (
+              <>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Subject</th>
+                      <th>Supplier</th>
+                      <th>Location</th>
+                      <th>Due Date</th>
+                      <th>Completed</th>
+                      <th>Progress</th>
+                      <th>OTIF</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cases.map((c) => (
+                      <tr key={c.id}>
+                        <td>
+                          <a href={`/emails/${c.id}`} style={{ color: '#0078d4' }}>
+                            {c.email?.subject?.substring(0, 40) || '-'}
+                            {(c.email?.subject?.length || 0) > 40 ? '...' : ''}
+                          </a>
+                        </td>
+                        <td>{c.supplierName || '-'}</td>
+                        <td>{c.locationName || '-'}</td>
+                        <td>{formatDate(c.caseDueAt)}</td>
+                        <td>{formatDate(c.completedAt)}</td>
+                        <td>
+                          {c.completedTasks || 0}/{c.totalTasks || 0}
+                        </td>
+                        <td>
+                          {c.isOtif === true && <span style={{ color: '#10b981' }}>✅</span>}
+                          {c.isOtif === false && <span style={{ color: '#ef4444' }}>❌</span>}
+                          {c.isOtif === null && <span style={{ color: '#9ca3af' }}>-</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
+                    <button 
+                      className="btn btn-secondary" 
+                      disabled={page <= 1}
+                      onClick={() => { setPage(page - 1); loadCasesByStatus(selectedStatus); }}
+                    >
+                      ← Prev
+                    </button>
+                    <span style={{ padding: '8px 16px', alignSelf: 'center' }}>
+                      Page {page} of {totalPages}
+                    </span>
+                    <button 
+                      className="btn btn-secondary" 
+                      disabled={page >= totalPages}
+                      onClick={() => { setPage(page + 1); loadCasesByStatus(selectedStatus); }}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

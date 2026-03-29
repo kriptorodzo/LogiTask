@@ -236,6 +236,27 @@ export const reportsApi = {
     const { data } = await apiClient.post('/api/reports/recalculate', body);
     return data;
   },
+  getOverviewV2: async (params?: {
+    from?: string;
+    to?: string;
+    supplierName?: string;
+    locationName?: string;
+  }) => {
+    const { data } = await apiClient.get('/api/reports/overview-v2', { params });
+    return data;
+  },
+  getCasesByStatus: async (params?: {
+    status?: string;
+    from?: string;
+    to?: string;
+    supplierName?: string;
+    locationName?: string;
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const { data } = await apiClient.get('/api/reports/cases-by-status', { params });
+    return data;
+  },
 };
 
 export default apiClient;
