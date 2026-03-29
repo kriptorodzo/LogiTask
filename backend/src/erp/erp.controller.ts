@@ -81,6 +81,31 @@ export class ErpController {
   }
 
   /**
+   * GET /api/erp/batches
+   * List all import batches
+   */
+  @Get('batches')
+  async getBatches(
+    @Query('page') page = '1',
+    @Query('pageSize') pageSize = '20',
+  ) {
+    const batches = await this.prisma.erpImportBatch.findMany({
+      orderBy: { importedAt: 'desc' },
+      take: parseInt(pageSize),
+      skip: (parseInt(page) - 1) * parseInt(pageSize),
+    });
+
+    const total = await this.prisma.erpImportBatch.count();
+
+    return {
+      batches,
+      total,
+      page: parseInt(page),
+      pageSize: parseInt(pageSize),
+    };
+  }
+
+  /**
    * GET /api/erp/documents
    * List ERP documents with filters
    */
