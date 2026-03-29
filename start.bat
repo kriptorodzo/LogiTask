@@ -33,9 +33,11 @@ if exist "migrations\0000_initial.migration.sql" (
 REM Create .env file with default SQLite if not exists
 if not exist ".env" (
     echo Creating .env file with SQLite configuration...
-    echo DATABASE_URL=file:./dev.db> .env
-    echo AUTH_MODE=development>> .env
-    echo NODE_ENV=development>> .env
+    (
+        echo DATABASE_URL=file:./dev.db
+        echo AUTH_MODE=development
+        echo NODE_ENV=development
+    ) > .env
 )
 
 REM Load environment from .env
