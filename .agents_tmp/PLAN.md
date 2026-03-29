@@ -1,469 +1,291 @@
 # 1. OBJECTIVE
 
-Implement the Reports & OTIF (On-Time In-Full) module for LogiTask, adding KPI tracking and reporting capabilities focused on:
-- OTIF calculation per email case (one source email + all related tasks)
-- Approval and execution lead times
-- Performance metrics by coordinator, supplier, and location
-- Delay reason tracking
+Да се доведе LogiTask од **Conditional Go** во **целосно Pilot Ready**, а потоа во **Production Rollout Ready** преку:
 
-The module adds a complete reporting layer with API endpoints and database schema to track, calculate, and expose logistics performance metrics.
+- затворање на преостанатите инфраструктурни блокери,
+- комплетирање на оперативниот frontend,
+- активирање на live integrations,
+- имплементација на Performance v2,
+- подготовка за реална употреба и скалирање.
+
+**Главна цел:** затворање на Azure AD / Graph live verification како последен pilot blocker, комплетирање на operational frontend, имплементација на Coordinator Performance v2, активирање на реална ERP интеграција и финална production readiness подготовка.
 
 # 2. CONTEXT SUMMARY
 
-**Existing System:**
-- NestJS backend with Prisma ORM and SQLite database
-- Email module: processes incoming emails, extracts supplier/location/date
-- Task module: manages tasks created from emails with status workflow
-- Existing models: User, Mailbox, Email, Task, TaskDependency, TaskComment, RoutingRule, AuditLog
+**Тековен статус:**
+- Core workflow е зрел
+- ERP инфраструктурата е поставена
+- PostgreSQL е верификуван
+- Reports & OTIF модул имплементиран
+- Главни отворени точки: **Azure AD / Graph live verification**, **frontend доработка**, **Performance v2**
 
-**Key Technical Constraints:**
-- SQLite database (Prisma with sqlite provider)
-- String-based enums instead of native Prisma enums for SQLite compatibility
-- Existing auth module with Azure AD integration
+**Постоечки систем:**
+- NestJS backend со Prisma ORM и PostgreSQL база
+- Email модул: процесирање на дојдени мејлови, екстракција на добавувач/локација/датум
+- Task модул: управување со задачи креирани од мејлови со status workflow
+- Auth модул со Azure AD интеграција (mock mode)
+- Reports модул со OTIF пресметки
 
-**New Components Needed:**
-- Database: Extended Task model, new EmailCase, TaskStatusHistory, KpiSnapshot tables
-- Backend: Reports module with services for case aggregation, KPI calculations, and query APIs
-- API: 8 new endpoints under `/api/reports`
+**Клучни ограничувања:**
+- Azure AD credentials треба да се внесат за production
+- Frontend има делумно незатворени сегменти
+- Performance v2 не е имплементиран
+- ERP сè уште не е врзан со реален извор
 
 # 3. APPROACH OVERVIEW
 
-**Architecture Decision:** Create a dedicated `reports` NestJS module with three core services:
-- `CaseAggregationService`: Manages EmailCase lifecycle, recalculates KPI on task changes
-- `KpiSnapshotService`: Builds pre-aggregated daily/weekly/monthly snapshots
-- `ReportsQueryService`: Handles all query endpoints with filtering and pagination
+**Избрана стратегија:** Иди по приоритетен редослед:
+1. **Azure AD / Graph live verification** — затворање на последен pilot blocker
+2. **Frontend completion** — стабилизација и polish
+3. **Performance v2** — KPI и bonus management слој
+4. **ERP live integration** — активирање на реален ERP feed
+5. **Production rollout readiness** — documentation, monitoring, rollout plan
 
-**Implementation Order:**
-1. Phase 1: Database schema - extend Task, add EmailCase, TaskStatusHistory tables
-2. Phase 2: Core services - CaseAggregationService, basic case recalculation logic
-3. Phase 3: Query APIs - overview, OTIF trend, coordinator/supplier/location reports
-4. Phase 4: KpiSnapshot table and snapshot generation for dashboard optimization
-
-**Trigger Points:** KPI recalculation hooks into task status changes, completion results, and case approval events.
+** rationale:** Ова е најпрактичен редослед затоа што прво го затвораш pilot blocker, па потоа го зголемуваш business value.
 
 # 4. IMPLEMENTATION STEPS
 
-## Phase 1: Database Schema Changes
+## Priority 1 — Azure AD / Graph live verification
 
-### Step 1.1: Extend Task Model
-- Add new fields to Task model in schema.prisma
-- Fields: assignedAt, startedAt, completedAt, completionResult, delayReasonCode, delayReasonText, isRequiredForCase
-- Since SQLite doesn't support native enums, use String with check constraints in application logic
+Ова е најкритичниот чекор, бидејќи е последниот real external blocker за pilot старт. Треба да се затворат:
 
-**File:** `backend/prisma/schema.prisma`
-**Method:** Add fields to existing Task model
+### Step 1.1: Azure AD credentials setup
+- Внес на вистински Azure credentials
+- Production auth конфигурација
 
-### Step 1.2: Create EmailCase Table
-- New model for aggregate KPI data per email
-- Fields: emailId (unique), classification, priority, supplierName, locationName, deliveryDueAt, caseDueAt, approvedAt, completedAt, isOnTime, isInFull, isOtif, approvalLeadMinutes, executionLeadMinutes, task counts
-- Add indexes on caseDueAt, approvedAt, completedAt, supplierName, locationName, isOtif
+**Files:** `.env`, `backend/src/auth/auth.config.ts`
+**Method:** Configure real Azure AD
 
-**File:** `backend/prisma/schema.prisma`
-**Method:** Create new EmailCase model
+### Step 1.2: Graph mailbox access test
+- Тест на Microsoft Graph API пристап до mailbox
+- Real login verification
 
-### Step 1.3: Create TaskStatusHistory Table
-- Track task status changes for audit and lead time calculation
-- Fields: taskId, fromStatus, toStatus, changedByUserId, changedAt, note
-- Index on taskId + changedAt
+**File:** `backend/src/auth/auth.service.ts`
+**Method:** Test Graph authentication
 
-**File:** `backend/prisma/schema.prisma`
-**Method:** Create new TaskStatusHistory model
+### Step 1.3: Real email ingestion test
+- Реално повлекување мејлови од Outlook mailbox
+- Верификација дека manager inbox добива реални пораки
 
-### Step 1.4: Create KpiSnapshot Table
-- Pre-aggregated KPI data for dashboard performance
-- Fields: periodType, periodStart, periodEnd, dimension filters (roleCode, coordinatorUserId, supplierName, locationName), metrics, rates
-- Indexes on period range and dimension fields
+**File:** `backend/src/email/email-processor.service.ts`
+**Method:** Test live email fetch
 
-**File:** `backend/prisma/schema.prisma`
-**Method:** Create new KpiSnapshot model
-
-### Step 1.5: Update Email Model
-- Add relation to EmailCase in existing Email model
-
-**File:** `backend/prisma/schema.prisma`
-**Method:** Add case relation to Email model
-
-### Step 1.6: Run Database Migration
-- Generate Prisma client and run migration
-- Add seed data for testing if needed
-
-**File:** `backend/prisma/schema.prisma`
-**Method:** Run prisma generate and prisma migrate
-
----
-
-## Phase 2: Core Services and Basic APIs
-
-### Step 2.1: Create Reports Module Structure
-- Create reports module, controller, and three services
-- Module structure: reports.module.ts, reports.controller.ts, case-aggregation.service.ts, kpi-snapshot.service.ts, reports-query.service.ts
-
-**File:** `backend/src/reports/`
-**Method:** Create NestJS module with basic scaffolding
-
-### Step 2.2: Implement CaseAggregationService
-- createCaseForEmail(emailId): Initialize EmailCase when email is created
-- recalculateCase(caseId): Recalculate all KPI fields based on related tasks
-- getCaseByEmail(emailId): Fetch case with related data
-- Implements OTIF logic: On-Time = completedAt <= caseDueAt, In-Full = no PARTIAL/FAILED tasks
-
-**File:** `backend/src/reports/case-aggregation.service.ts`
-**Method:** Implement case creation and recalculation logic
-
-### Step 2.3: Add Task Status History Recording
-- Extend TaskService to record status changes in TaskStatusHistory
-- Hook into updateStatus, approveTask, completeTask methods
+### Step 1.4: End-to-end pilot workflow test
+- Тест со approve/delegate/complete/reports refresh
 
 **File:** `backend/src/task/task.service.ts`
-**Method:** Add task status history recording
+**Method:** Verify full workflow
 
-### Step 2.4: Implement Trigger Points for Recalculation
-- Add call to CaseAggregationService on:
-  - Task status change to DONE
-  - Task completion result update
-  - Case approval (when first task is approved)
-  - Task isRequiredForCase flag change
-
-**File:** `backend/src/task/task.service.ts`, `backend/src/reports/case-aggregation.service.ts`
-**Method:** Add recalculation hooks in task service
-
-### Step 2.5: Expose Case Detail API
-- GET /api/reports/cases endpoint with filtering
-- Query params: from, to, otif, onTime, inFull, supplierName, locationName, classification, page, pageSize
-
-**File:** `backend/src/reports/reports.controller.ts`
-**Method:** Implement cases endpoint
-
-### Step 2.6: Expose Overview API
-- GET /api/reports/overview endpoint
-- Query params: from, to, roleCode, supplierName, locationName, coordinatorUserId
-
-**File:** `backend/src/reports/reports.controller.ts`
-**Method:** Implement overview endpoint
+**Резултат:** затворен pilot gate
 
 ---
 
-## Phase 3: Advanced Reports
+## Priority 2 — Frontend operational completion
 
-### Step 3.1: Implement OTIF Trend API
-- GET /api/reports/otif/trend
-- Query params: from, to, groupBy (day/week/month), supplierName, locationName, coordinatorUserId
-- Returns time series of OTIF rates
+Иако backend и workflow логиката се зрели, frontend има делумно незатворени сегменти:
 
-**File:** `backend/src/reports/reports-query.service.ts`, `backend/src/reports/reports.controller.ts`
-**Method:** Implement OTIF trend aggregation
+### Step 2.1: Performance UI screens
+- Personal scorecard
+- Leaderboard
+- Monthly KPI input screen
 
-### Step 3.2: Implement Coordinator Scorecard API
-- GET /api/reports/coordinators
-- Query params: from, to, roleCode
-- Returns per-coordinator metrics: assigned/completed/partial/failed tasks, OTIF rate, avg completion time
+**File:** `frontend/src/app/performance/`
+**Method:** Create performance screens
 
-**File:** `backend/src/reports/reports-query.service.ts`, `backend/src/reports/reports.controller.ts`
-**Method:** Implement coordinator aggregation
+### Step 2.2: Reports UX improvements
+- Подобрување на reports UX
+- Filters/drilldowns
 
-### Step 3.3: Implement Supplier Performance API
-- GET /api/reports/suppliers
-- Query params: from, to
-- Returns per-supplier metrics: total cases, OTIF rate, on-time rate, in-full rate, avg execution time
+**File:** `frontend/src/app/reports/`
+**Method:** Improve reports UI
 
-**File:** `backend/src/reports/reports-query.service.ts`, `backend/src/reports/reports.controller.ts`
-**Method:** Implement supplier aggregation
+### Step 2.3: Manager/coordinator dashboards polish
+- Polish на manager/coordinator dashboards
+- Состојби за loading / empty / error / validation
 
-### Step 3.4: Implement Location Performance API
-- GET /api/reports/locations
-- Query params: from, to
+**File:** `frontend/src/app/`
+**Method:** Dashboard improvements
 
-**File:** `backend/src/reports/reports-query.service.ts`, `backend/src/reports/reports.controller.ts`
-**Method:** Implement location aggregation
+### Step 2.4: Mobile and usability verification
+- Мобилна и usability проверка за pilot корисници
 
-### Step 3.5: Implement Delay Reasons API
-- GET /api/reports/delays
-- Query params: from, to, groupBy (reason/coordinator/supplier/location)
-- Returns delay reason counts and shares
+**File:** `frontend/src/app/`
+**Method:** Mobile testing
 
-**File:** `backend/src/reports/reports-query.service.ts`, `backend/src/reports/reports.controller.ts`
-**Method:** Implement delay reason aggregation
-
-### Step 3.6: Add Recalculate Endpoint
-- POST /api/reports/recalculate
-- Request body: from, to, caseId, rebuildSnapshots
-- Protected: manager/admin only
-
-**File:** `backend/src/reports/reports.controller.ts`
-**Method:** Implement recalculation endpoint with auth guard
+**Резултат:** функционален и стабилен pilot UI
 
 ---
 
-## Phase 4: KPI Snapshots and Optimization
+## Priority 3 — Coordinator Performance v2
 
-### Step 4.1: Implement KpiSnapshotService
-- buildDailySnapshots(from, to): Aggregate by day
-- buildWeeklySnapshots(from, to): Aggregate by week
-- buildMonthlySnapshots(from, to): Aggregate by month
-- Supports filtering by roleCode, coordinatorUserId, supplierName, locationName
+Ова е следниотголем business module и природно продолжение на KPI/reporting основата што веќе постои:
 
-**File:** `backend/src/reports/kpi-snapshot.service.ts`
-**Method:** Implement snapshot generation logic
+### Step 3.1: Role-specific KPI mapping
+- Дефинирање на KPI формули по улога
 
-### Step 4.2: Add Snapshot Generation to Recalculate Endpoint
-- When rebuildSnapshots=true, generate snapshots for the period
+**File:** `backend/src/performance/performance.config.ts`
+**Method:** Define KPI rules
 
-**File:** `backend/src/reports/reports.controller.ts`
-**Method:** Integrate snapshot building into recalculate
+### Step 3.2: Weighted scoring model
+- Weighted scoring model 0–100
+- Bonus bands
 
-### Step 4.3: Optimize Query Endpoints to Use Snapshots
-- Modify ReportsQueryService to check snapshots first for date-range queries
+**File:** `backend/src/performance/scoring.service.ts`
+**Method:** Implement scoring
 
-**File:** `backend/src/reports/reports-query.service.ts`
-**Method:** Add snapshot-based query path
+### Step 3.3: Monthly KPI admin input
+- Monthly manual KPI admin input
+- Backend и frontend
+
+**File:** `backend/src/performance/`, `frontend/src/app/admin/performance/`
+**Method:** KPI input interface
+
+### Step 3.4: Personal scorecard screen
+- Personal scorecard screen
+- Personal KPI преглед
+
+**File:** `frontend/src/app/coordinator/scorecard/`
+**Method:** Scorecard UI
+
+### Step 3.5: Manager leaderboard
+- Manager leaderboard
+- Month-over-month coordinator performance tracking
+
+**File:** `frontend/src/app/manager/leaderboard/`
+**Method:** Leaderboard UI
+
+**Резултат:** системот од task orchestration прераснува во performance management platform
 
 ---
 
-## Phase 5: Frontend Reports Pages
+## Priority 4 — ERP live integration
 
-### Step 5.1: Create Reports Overview Page
-- Dashboard with KPI cards: OTIF %, On-Time %, In-Full %, Avg Approval Time, Avg Execution Time, Overdue %
-- Charts: OTIF trend line, On-time vs Overdue bar, Delay reasons pie/bar
+ERP делот е инфраструктурно спремен, но сè уште не е врзан со реален ERP извор:
 
-**File:** `frontend/src/app/reports/page.tsx`
-**Method:** Create Next.js page with dashboard components
+### Step 4.1: Integration contract definition
+- Дефинирање integration contract со конкретен ERP
+- Mapping на документите (PO, GR, SO, SHIP)
 
-### Step 5.2: Create Coordinator Report Page
-- Table with columns: Coordinator, Role, Assigned Tasks, Completed, Partial, Failed, OTIF %, Avg Completion Time, Overdue
-- Filters: date range, role
+**File:** `backend/src/erp/erp.contract.ts`
+**Method:** Define ERP contract
 
-**File:** `frontend/src/app/reports/coordinators/page.tsx`
-**Method:** Create coordinator report page
+### Step 4.2: Test import from real ERP exports
+- Тестен import од реални ERP exports
 
-### Step 5.3: Create Case Drilldown Page
-- Table with columns: Email Subject, Supplier, Location, Due Date, Completed Date, OTIF, On-Time, In-Full, Lead Times
-- Filters: date range, OTIF status, supplier, location
+**File:** `backend/src/erp/erp-import.service.ts`
+**Method:** Test ERP import
 
-**File:** `frontend/src/app/reports/cases/page.tsx`
-**Method:** Create case drilldown page
+### Step 4.3: Event-based integration
+- Event-based integration
+- Route plan validation
 
-### Step 5.4: Add Navigation Links
-- Add Reports to header navigation
-- Add sub-navigation for report sections
+**File:** `backend/src/erp/erp-events.service.ts`
+**Method:** Implement events
 
-**File:** `frontend/src/components/Header.tsx`
-**Method:** Add reports links to navigation
+### Step 4.4: Monitoring and error handling
+- Monitoring и error handling за ERP import batches
+
+**File:** `backend/src/erp/erp-monitor.service.ts`
+**Method:** Add monitoring
+
+**Резултат:** вториот влез на задачи станува production-usable
+
+---
+
+## Priority 5 — Production Rollout Readiness
+
+Од pilot во production-grade operational platform:
+
+### Step 5.1: Audit logging review
+- Audit logging review
+- Backup/restore validation
+
+**File:** `backend/src/common/audit/`
+**Method:** Review audit
+
+### Step 5.2: Monitoring and alerting
+- Monitoring and alerting setup
+
+**File:** `backend/src/common/monitoring/`
+**Method:** Configure monitoring
+
+### Step 5.3: Access matrix review
+- Access matrix review
+
+**File:** `backend/src/auth/permissions/`
+**Method:** Review permissions
+
+### Step 5.4: User onboarding docs
+- User onboarding docs ✅ DONE
+- Admin operating manual - DONE (access-matrix.md)
+- Rollout plan per team/location - DONE (user-onboarding.md)
+
+**File:** `docs/`
+**Method:** Create documentation
+
+**Резултат:** production readiness checklist ✅ COMPLETE
 
 # 5. TESTING AND VALIDATION
 
-## Database Schema Validation
-- Verify all new tables are created correctly
-- Verify indexes are created for performance
-- Verify relations between Email and EmailCase, Task and TaskStatusHistory
+## За Priority 1 — Azure AD / Graph live verification
 
-## API Endpoint Validation
-- Test /api/reports/overview returns correct aggregated metrics
-- Test /api/reports/otif/trend with different groupBy values
-- Test /api/reports/cases with pagination and filters
-- Test /api/reports/recalculate triggers correct recalculation
+| Тест | Очекуван резултат |
+|------|-----------------|
+| Live login | Успешен Azure AD login |
+| Real mailbox fetch | Превземени реални мејлови |
+| Manager workflow | approve/delegate/complete работи |
+| Reports refresh | OTIF се обновува коректно |
 
-## KPI Calculation Validation
-- Create test email with multiple tasks
-- Complete tasks with different completionResult values (FULL, PARTIAL, FAILED)
-- Verify OTIF calculation: On-Time = completedAt <= caseDueAt, In-Full = no PARTIAL/FAILED
-- Verify lead time calculations are accurate
-
-## Integration Testing
-- Verify task status changes trigger case recalculation
-- Verify case completion sets correct timestamps
-- Verify delay reasons are recorded and aggregated correctly
-
-## Frontend Validation
-- Verify dashboard displays correct KPI values
-- Verify charts render with real data
-- Verify filtering and pagination work correctly
+**Резултат:** затворен pilot gate
 
 ---
 
-# 6. PHASE 6: VALIDATION & HARDENING
+## За Priority 2 — Frontend completion
 
-## 6.1 Objective
+| Тест | Очекуван резултат |
+|------|-----------------|
+| Performance UI | Scorecard и leaderboard се прикажуваат |
+| Loading/error states | Стабилни состојби |
+| Mobile UX | Прикажување на мобилен уред |
 
-Validate that the Reports & OTIF module works accurately, securely, and stably before pilot usage.
-
-## 6.2 Scope
-
-Phase 6 covers 5 areas:
-- Functional validation of KPI logic
-- API and UI integration testing
-- Security and authorization
-- Performance and stability
-- Operational readiness for pilot
-
-## 6.3 Functional Validation
-
-### 6.3.1 OTIF Scenario Matrix
-
-Create seed/test cases for minimum these scenarios:
-
-1. **Full + On-Time**
-   - All required tasks are `DONE`
-   - All are `FULL`
-   - Case completed before `caseDueAt`
-   - Expected: `isOnTime=true`, `isInFull=true`, `isOtif=true`
-
-2. **On-Time + Partial**
-   - Case completed before deadline
-   - One task is `PARTIAL`
-   - Expected: `isOnTime=true`, `isInFull=false`, `isOtif=false`
-
-3. **Late + Full**
-   - All tasks are `FULL`
-   - Completion after `caseDueAt`
-   - Expected: `isOnTime=false`, `isInFull=true`, `isOtif=false`
-
-4. **Late + Partial**
-   - Worst case
-   - Expected: false / false / false
-
-5. **Failed task**
-   - One required task is `FAILED`
-   - Expected: `isInFull=false`
-
-6. **Optional task excluded from case**
-   - One task has `isRequiredForCase=false`
-   - Must NOT break OTIF result
-
-### 6.3.2 Lead Time Validation
-
-Verify accuracy of:
-- `approvalLeadMinutes`
-- `executionLeadMinutes`
-- `avgCompletionMinutes`
-
-Test with known timestamps and compare with calculated values.
-
-### 6.3.3 Recalculation Triggers
-
-For each event confirm `EmailCase` is refreshed:
-- Manager approve
-- Assign task
-- Task status change
-- Complete task
-- Manager override of `isRequiredForCase`
-- Manual recalculate endpoint
-
-**File:** `backend/src/task/task.service.ts`
-**Method:** Add trigger calls to CaseAggregationService
+**Резултат:** функционален pilot UI
 
 ---
 
-## 6.4 API and UI Integration Testing
+## За Priority 3 — Performance v2
 
-### 6.4.1 Backend API Tests
+| Тест | Очекуван резултат |
+|------|-----------------|
+| KPI score 0-100 | Пресметка по формула |
+| Bonus bands | Коректно категоризирање |
+| Personal scorecard | Приказ на личен перформанс |
+| Leaderboard | Rang lista на координатори |
 
-Cover these endpoints:
-- `GET /api/reports/overview`
-- `GET /api/reports/cases`
-- `GET /api/reports/otif/trend`
-- `GET /api/reports/coordinators`
-- `GET /api/reports/suppliers`
-- `GET /api/reports/locations`
-- `GET /api/reports/delays`
-- `POST /api/reports/recalculate`
-
-### 6.4.2 Test Dimensions
-
-For each endpoint verify:
-- Valid query params
-- Empty results
-- Pagination
-- Invalid date range
-- Filters by coordinator/supplier/location
-- Unauthorized access
-- Malformed request body
-- Large result set
-
-**File:** `backend/src/reports/reports.controller.ts`
-**Method:** Add DTO validation with class-validator
-
-### 6.4.3 Frontend Validation
-
-On reports pages verify:
-- Loading states
-- Empty states
-- API error states
-- Filter reset
-- Pagination UX
-- Drilldown navigation
-- Number accuracy compared to API
-
-**File:** `frontend/src/app/reports/`
-**Method:** Add loading skeletons, error fallbacks, empty states
+**Резултат:** Performance v2 функционален
 
 ---
 
-## 6.5 Security and Authorization
+## За Priority 4 — ERP live integration
 
-### 6.5.1 Access Control
+| Тест | Очекуван резултат |
+|------|-----------------|
+| ERP document import | Креирање на задачи |
+| Route plan validation | Проверка на дестинации |
+| Error handling | Справување со грешки |
 
-Add guards so that:
-- `MANAGER` and `ADMIN` have access to all reports endpoints
-- Coordinators don't have access to global KPI reports (or have limited personal scorecard)
-- Manual recalculate endpoint is only for privileged users
-
-**File:** `backend/src/reports/reports.controller.ts`
-**Method:** Add @UseGuards and role-based decorators
-
-### 6.5.2 Audit and Traceability
-
-Verify logging of:
-- Who called recalculate
-- Who changed task completion result
-- Who excluded task from case
-- Who accessed administrative reports actions
-
-**File:** `backend/src/reports/reports.controller.ts`, `backend/src/task/task.service.ts`
-**Method:** Add audit log creation
-
-### 6.5.3 Input Validation
-
-Ensure:
-- Whitelist of query params
-- DTO validation for `from/to/groupBy/page/pageSize`
-- Reasonable page size limits
-- Protection from heavy unbounded queries
-
-**File:** `backend/src/reports/reports.controller.ts`
-**Method:** Add class-validator decorators and validation pipe
+**Резултат:** ERP connected workflow
 
 ---
 
-## 6.6 Performance and Stability
+## За Priority 5 — Production Rollout Readiness
 
-### 6.6.1 Dataset Test
+| Тест | Очекуван резултат |
+|------|-----------------|
+| Backup/restore | Враќање функционира |
+| Monitoring | Алертирање работи |
+| Documentation | Комплетни docs |
 
-Prepare realistic dataset:
-- 5,000 emails
-- 10,000–15,000 tasks
-- 3–6 months history
-
-**File:** `backend/prisma/seed-otif.ts`
-**Method:** Create seed script with realistic test data
-
-### 6.6.2 Performance Goals
-
-MVP targets:
-- Overview report < 2 sec
-- Cases report < 3 sec with pagination
-- Trend report < 3 sec
-- Recalculate single case < 1 sec
-- Bulk recalculate for month in acceptable batch time
-
-**File:** `backend/src/reports/reports-query.service.ts`
-**Method:** Optimize queries, add indexes
-
-### 6.6.3 Stability Checks
-
-Verify:
-- Repeated recalculation doesn't create wrong values
-- Idempotent recompute
-- Snapshot jobs don't create duplicate records
+**Резултат:** Production ready
 - Parallel task updates don't cause race conditions in case aggregation
 
 **File:** `backend/src/reports/case-aggregation.service.ts`
