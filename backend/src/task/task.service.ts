@@ -58,7 +58,9 @@ export class TaskService {
     });
 
     // Trigger case status recalculation when task is created
-    this.triggerCaseStatusRecalculation(task.emailId).catch(console.error);
+    if (task.emailId) {
+      this.triggerCaseStatusRecalculation(task.emailId).catch(console.error);
+    }
 
     return task;
   }
@@ -140,7 +142,9 @@ export class TaskService {
     await this.recordStatusChange(id, currentTask?.status || null, TASK_STATUS.APPROVED, userId, `Assigned to ${assigneeId}`);
 
     // Trigger case recalculation when task is approved
-    this.triggerCaseRecalculation(task.emailId).catch(console.error);
+    if (task.emailId) {
+      this.triggerCaseRecalculation(task.emailId).catch(console.error);
+    }
 
     return task;
   }
@@ -195,7 +199,7 @@ export class TaskService {
     await this.recordStatusChange(id, currentTask?.status || null, status, userId);
 
     // Trigger case recalculation when task status changes to DONE
-    if (status === TASK_STATUS.DONE) {
+    if (status === TASK_STATUS.DONE && task.emailId) {
       this.triggerCaseRecalculation(task.emailId).catch(console.error);
     }
 
@@ -242,7 +246,9 @@ export class TaskService {
     await this.recordStatusChange(id, currentTask?.status || null, TASK_STATUS.DONE, userId, `Completed: ${completionResult}`);
 
     // Trigger case recalculation when task is completed
-    this.triggerCaseRecalculation(task.emailId).catch(console.error);
+    if (task.emailId) {
+      this.triggerCaseRecalculation(task.emailId).catch(console.error);
+    }
 
     return task;
   }
@@ -273,7 +279,9 @@ export class TaskService {
     });
 
     // Trigger case recalculation when isRequiredForCase changes
-    this.triggerCaseRecalculation(task.emailId).catch(console.error);
+    if (task.emailId) {
+      this.triggerCaseRecalculation(task.emailId).catch(console.error);
+    }
 
     return task;
   }

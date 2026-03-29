@@ -63,8 +63,8 @@ model Email {
 
 model Task {
   id              String    @id @default(uuid())
-  emailId         String
-  email           Email     @relation(fields: [emailId], references: [id])
+  emailId         String?
+  email           Email?    @relation(fields: [emailId], references: [id])
   assigneeId      String?
   assignee        User?     @relation(fields: [assigneeId], references: [id])
   title           String
@@ -83,6 +83,9 @@ model Task {
   delayReasonCode  String?
   delayReasonText  String?
   isRequiredForCase Boolean @default(true)
+
+  // ERP Integration
+  erpDocumentId   String?   // FK to ErpDocument (no relation needed on this side)
 
   dependencies    TaskDependency[]   @relation("DependentTask")
   dependents      TaskDependency[]   @relation("DependencyTask")
@@ -219,4 +222,71 @@ model KpiSnapshot {
   @@index([coordinatorUserId])
   @@index([supplierName])
   @@index([locationName])
+}
+
+// ERP Integration Models
+
+model RoutePlan {
+  id              String    @id @default(uuid())
+  destinationCode String    @unique
+  destinationName String
+  routeDay        String    // MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
+  prepOffsetDays  Int       @default(1) // Days before route day for preparation
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([routeDay])
+  @@index([active])
+}
+
+model ErpImportBatch {
+  id          String    @id @default(uuid())
+  fileName    String
+  status      String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  totalRows   Int       @default(0)
+  processedRows Int     @default(0)
+  errorRows   Int       @default(0)
+  errors      String?   // JSON string of errors
+  importedBy  String?   // User ID
+  importedAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  erpDocuments ErpDocument[]
+
+  @@index([status])
+  @@index([importedAt])
+}
+
+model ErpDocument {
+  id              String    @id @default(uuid())
+  batchId         String
+  batch           ErpImportBatch @relation(fields: [batchId], references: [id])
+  
+  sourceType      String    // ERP_IMPORT, EMAIL, MANUAL
+  documentType    String    // PURCHASE_ORDER, GOODS_RECEIPT, SALES_ORDER, SHIPMENT_ORDER
+  
+  documentNumber  String
+  partnerName     String?
+  partnerCode     String?
+  destinationName String?
+  destinationCode String?
+  
+  lineCount       Int       @default(0)
+  totalQuantity   Int       @default(0)
+  plannedDate     DateTime?
+  
+  // Link to task if created from this document
+  taskId          String?   @unique // FK to Task (no relation needed on this side)
+  
+  // Raw data
+  rawPayloadJson  String?   // Original row data as JSON
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([batchId])
+  @@index([documentType])
+  @@index([plannedDate])
+  @@index([documentNumber])
 }
