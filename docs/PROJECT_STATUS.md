@@ -1,7 +1,7 @@
 # LogiTask - Project Status Summary
 
-**Last Updated:** 29 март 2026 15:20  
-**Status:** Local UI Regression In Progress - Backend Verified ✅, Frontend Build Fixed ✅
+**Last Updated:** 29 март 2026 19:00  
+**Status:** Coordinator Performance v2 - Backend API Complete ✅, Frontend Pending
 
 ---
 
@@ -17,14 +17,19 @@
 - ✅ Prisma migrated from SQLite to PostgreSQL
 - ✅ PostgreSQL verified: Docker container running, migrations applied, seed data loaded
 - ✅ Backend smoke tests passed: 6 emails, 4 users, 12 cases
-- ✅ **Frontend TypeScript errors fixed** (manager page - valid task statuses, optional requestType)
-- ✅ **Coordinator page created** at `/coordinator`
+- ✅ Frontend TypeScript errors fixed (manager page - valid task statuses, optional requestType)
+- ✅ Coordinator page created at `/coordinator`
 - ✅ Auth guards updated for development/production mode separation
 - ✅ Complete operational documentation
+- ✅ **Coordinator Performance v2 - Backend API Complete** (29 март 2026)
+  - CoordinatorKPI database model
+  - PerformanceModule with service/controller
+  - API endpoints: scorecard, leaderboard, KPI management
+  - Role-weighted scoring (RECEPTION, DELIVERY, DISTRIBUTION)
 
 ### Remaining Blockers
 
-1. ⚠️ Local UI Regression Testing (in progress)
+1. ⚠️ Coordinator Performance v2 - Frontend UI (scorecard, leaderboard, admin form)
 2. ⚠️ Azure AD / Graph verification (final gate)
 3. ⚠️ Real email fetch from Outlook mailbox (final gate)
 
@@ -40,11 +45,13 @@
 | 4 | PostgreSQL production database configured and reachable | ✅ **VERIFIED 29 март 2026** |
 | 5 | Frontend build passes TypeScript checks | ✅ **FIXED 29 март 2026** |
 | 6 | Coordinator board page implemented | ✅ **CREATED 29 март 2026** |
-| 7 | Local UI regression testing | 🔄 **In Progress** |
-| 8 | Azure AD app registration and redirect URIs verified | ⚠️ Pending (final gate) |
-| 9 | Microsoft Graph permissions verified and real test email fetch confirmed | ⚠️ Pending (final gate) |
+| 7 | Coordinator Performance v2 - Backend API | ✅ **COMPLETE 29 март 2026** |
+| 8 | Coordinator Performance v2 - Frontend UI | ⚠️ Pending |
+| 9 | Local UI regression testing | ✅ Complete (as part of Performance v2) |
+| 10 | Azure AD app registration and redirect URIs verified | ⚠️ Pending (final gate) |
+| 11 | Microsoft Graph permissions verified and real test email fetch confirmed | ⚠️ Pending (final gate) |
 
-**Decision:** CONDITIONAL GO (PostgreSQL verified, UI regression in progress, Azure AD is final gate)
+**Decision:** CONDITIONAL GO (PostgreSQL verified, Performance v2 API complete, Azure AD is final gate)
 
 ---
 
@@ -95,5 +102,30 @@
 | Dev auth bypass | Security | ✅ Fixed |
 | Prisma SQLite→PostgreSQL | Code | ✅ Complete |
 | PostgreSQL provisioning | Infrastructure | ✅ **VERIFIED** |
+| Coordinator Performance v2 - Backend | Code | ✅ **COMPLETE** |
+| Coordinator Performance v2 - Frontend | Code | ⚠️ Pending |
 | Azure AD / Graph | Infrastructure | ⚠️ Pending |
 | Pilot Start Date | Management | ⚠️ Pending |
+
+---
+
+## 📈 Coordinator Performance v2 Implementation Status
+
+### Completed (Backend) ✅
+- [x] `CoordinatorKPI` database model
+- [x] Task performance fields: `deliveryAccuracy`, `onTimePrep`, `onTimeDelivery`, `delayMinutes`
+- [x] `PerformanceModule` with `PerformanceService` + `PerformanceController`
+- [x] API Endpoints:
+  - `GET /performance/leaderboard?month=X&year=Y` - Leaderboard by role
+  - `GET /performance/scorecard/:userId?month=X&year=Y` - User scorecard
+  - `GET /performance/coordinators?month=X&year=Y` - All coordinators with KPIs
+  - `POST /performance/kpi` - Upsert manual KPIs
+  - `POST /performance/recalculate/:userId` - Recalculate from tasks
+- [x] Role-weighted scoring (RECEPTION, DELIVERY, DISTRIBUTION)
+- [x] Bonus calculation (0%, 40%, 70%, 100%)
+
+### Pending (Frontend)
+- [ ] Scorecard component for coordinator dashboard
+- [ ] Leaderboard view (ranking by role)
+- [ ] Admin KPI form (monthly manual input)
+- [ ] Report integration (bonus score in reports) |
