@@ -186,6 +186,19 @@ export default function CoordinatorPage() {
                   <h3 style={{ margin: 0, marginBottom: '4px' }}>{task.title}</h3>
                   <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
                     {task.requestType}
+                    {/* Show ERP source badge */}
+                    {(task.requestType?.startsWith('ERP_') || task.erpDocumentId) && (
+                      <span style={{
+                        marginLeft: '8px',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        background: '#e3f2fd',
+                        color: '#1565c0',
+                      }}>
+                        ERP
+                      </span>
+                    )}
                     {task.dueDate && (
                       <span> • До: {new Date(task.dueDate).toLocaleDateString()}</span>
                     )}
@@ -198,6 +211,20 @@ export default function CoordinatorPage() {
 
               {task.description && (
                 <p style={{ margin: '8px 0', color: '#555' }}>{task.description}</p>
+              )}
+
+              {/* Show ERP document details if available */}
+              {task.erpDocumentId && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  background: '#f5f5f5',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  color: '#666'
+                }}>
+                  <span style={{ fontFamily: 'monospace' }}># ERP документ</span>
+                </div>
               )}
 
               <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>

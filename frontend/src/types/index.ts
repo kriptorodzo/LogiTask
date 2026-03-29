@@ -93,6 +93,7 @@ export interface Task {
   status: TaskStatus;
   requestType: RequestType;
   dueDate?: string;
+  erpDocumentId?: string; // For ERP-sourced tasks
   createdAt: string;
   updatedAt: string;
   dependencies?: TaskDependency[];

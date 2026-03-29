@@ -77,7 +77,7 @@ export class TaskService {
 
     return this.prisma.task.findMany({
       where,
-      include: { email: true, assignee: true, dependencies: true, comments: true },
+      include: { email: true, assignee: true, dependencies: true, comments: true, erpDocument: true },
       orderBy: { createdAt: 'desc' },
     });
   }

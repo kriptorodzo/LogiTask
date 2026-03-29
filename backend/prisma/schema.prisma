@@ -85,7 +85,8 @@ model Task {
   isRequiredForCase Boolean @default(true)
 
   // ERP Integration
-  erpDocumentId   String?   // FK to ErpDocument (no relation needed on this side)
+  erpDocumentId   String?
+  erpDocument     ErpDocument? @relation(fields: [erpDocumentId], references: [id])
 
   dependencies    TaskDependency[]   @relation("DependentTask")
   dependents      TaskDependency[]   @relation("DependencyTask")
