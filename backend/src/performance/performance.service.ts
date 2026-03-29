@@ -252,6 +252,7 @@ export class PerformanceService {
       totalScore,
       bonusPercent,
       bonusLabel: `${bonusPercent}%`,
+      bonusEligible: totalScore >= 60,
     };
   }
 
