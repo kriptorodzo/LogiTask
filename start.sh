@@ -19,6 +19,17 @@ fi
 echo ""
 echo "[2/4] Running Prisma migrations..."
 cd "$PROJECT_DIR/backend"
+
+# Load .env file if it exists
+if [ -f .env ]; then
+    echo "Loading environment from .env file..."
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Set default DATABASE_URL if not set
+export DATABASE_URL="${DATABASE_URL:-file:./dev.db}"
+echo "Using DATABASE_URL: $DATABASE_URL"
+
 npx prisma migrate dev
 
 echo ""

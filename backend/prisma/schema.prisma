@@ -9,7 +9,7 @@ datasource db {
   // For local development: use "sqlite" and DATABASE_URL="file:./dev.db"
   // For production/pilot: use "postgresql" and DATABASE_URL="postgresql://..."
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL", "file:./dev.db")
 }
 
 // Models - using String instead of enums for SQLite compatibility
