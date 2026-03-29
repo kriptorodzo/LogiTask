@@ -52,7 +52,7 @@ export const ERP_TASK_TEMPLATES: Record<string, ErpTaskTemplate[]> = {
     {
       title: 'Планирај простор за прием',
       requestType: 'ERP_RECEIVING',
-      assigneeRole: ERP_TASK_ROLES.RECEIVING_COORDINATOR,
+      assigneeRole: ERP_TASK_ROLES.RECEPTION_COORDINATOR,
       status: 'ASSIGNED',
     },
   ],
@@ -62,7 +62,7 @@ export const ERP_TASK_TEMPLATES: Record<string, ErpTaskTemplate[]> = {
     {
       title: 'Заврши прием',
       requestType: 'ERP_RECEIVING',
-      assigneeRole: ERP_TASK_ROLES.RECEIVING_COORDINATOR,
+      assigneeRole: ERP_TASK_ROLES.RECEPTION_COORDINATOR,
       status: 'ASSIGNED',
     },
   ],
