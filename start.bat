@@ -23,28 +23,27 @@ echo.
 echo [2/4] Running Prisma migrations...
 cd /d "%PROJECT_DIR%backend"
 
-REM Check if .env exists and load it
-if exist "%PROJECT_DIR%backend\.env" (
-    echo Loading environment from .env file...
-    for /f "usebackq tokens=1,2 delims==" %%a in ("%PROJECT_DIR%backend\.env") do (
-        if not "%%a" == "#" (
-            set "%%a=%%b"
-        )
-    )
+REM Create .env file with default SQLite if not exists
+if not exist ".env" (
+    echo Creating .env file with SQLite configuration...
+    echo DATABASE_URL=file:./dev.db> .env
+    echo AUTH_MODE=development>> .env
+    echo NODE_ENV=development>> .env
 )
 
-REM Set default DATABASE_URL if not set
-if not defined DATABASE_URL set "DATABASE_URL=file:./dev.db"
-echo Using DATABASE_URL: %DATABASE_URL%
+REM Load environment from .env
+for /f "usebackq tokens=1,* delims==" %%a in ("%PROJECT_DIR%backend\.env") do (
+    set "%%a=%%b"
+)
+
+REM Set DATABASE_URL directly in command
+echo Using DATABASE_URL: file:./dev.db
 
 call npx prisma migrate dev
 
 echo.
 echo [3/4] Seeding database...
-
-REM Set default DATABASE_URL if not set
-if not defined DATABASE_URL set "DATABASE_URL=file:./dev.db"
-call npm run prisma:seed
+call npx ts-node prisma/seed.ts
 
 echo.
 echo [4/4] Starting Backend server...
@@ -52,9 +51,7 @@ echo Backend will run on http://localhost:4000
 echo Open a new terminal for Frontend
 echo.
 
-REM Set default DATABASE_URL if not set
-if not defined DATABASE_URL set "DATABASE_URL=file:./dev.db"
-start "LogiTask Backend" cmd /k "set DATABASE_URL=%DATABASE_URL% && cd /d \"%PROJECT_DIR%backend\" && npm run start:dev"
+start "LogiTask Backend" cmd /k "set DATABASE_URL=file:./dev.db && cd /d \"%PROJECT_DIR%backend\" && npm run start:dev"
 
 cd /d "%PROJECT_DIR%frontend"
 
