@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { emailApi, taskApi, userApi } from '@/lib/api';
 import { Email, Task, User } from '@/types';
 import Header from '@/components/Header';
+import TopBar from '@/components/TopBar';
 
 type TabType = 'new' | 'pending' | 'delegated' | 'problematic' | 'overdue';
 
