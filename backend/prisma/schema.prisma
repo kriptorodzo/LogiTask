@@ -12,29 +12,30 @@ datasource db {
 
 // Models - using String instead of enums for SQLite compatibility
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  displayName   String?
-  role          String    @default("RECEPTION_COORDINATOR")
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(uuid())
+  email       String   @unique
+  displayName String?
+  role        String   @default("RECEPTION_COORDINATOR")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  tasks         Task[]
-  comments      TaskComment[]
-  auditLogs     AuditLog[]
-  statusHistory TaskStatusHistory[]
+  tasks          Task[]
+  comments       TaskComment[]
+  auditLogs      AuditLog[]
+  statusHistory  TaskStatusHistory[]
+  CoordinatorKPI CoordinatorKPI[]
 }
 
 model Mailbox {
-  id              String    @id @default(uuid())
-  emailAddress    String    @unique
-  displayName     String?
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id           String   @id @default(uuid())
+  emailAddress String   @unique
+  displayName  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  emails          Email[]
+  emails Email[]
 }
 
 model Email {
@@ -44,65 +45,71 @@ model Email {
   microsoftGraphId      String?   @unique
   subject               String
   sender                String
-  senderEmail            String
+  senderEmail           String
   body                  String?
   bodyPlainText         String?
   receivedAt            DateTime
   processingStatus      String    @default("PENDING")
   extractedSupplier     String?
-  extractedLocation    String?
+  extractedLocation     String?
   extractedDeliveryDate DateTime?
   extractedUrgency      String?
   requestType           String    @default("UNCLASSIFIED")
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  tasks                 Task[]
-  case                  EmailCase?
+  tasks Task[]
+  case  EmailCase?
 }
 
 model Task {
-  id              String    @id @default(uuid())
-  emailId         String?
-  email           Email?    @relation(fields: [emailId], references: [id])
-  assigneeId      String?
-  assignee        User?     @relation(fields: [assigneeId], references: [id])
-  title           String
-  description     String?
-  status          String    @default("PROPOSED")
-  requestType     String
-  dueDate         DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  emailId     String?
+  email       Email?    @relation(fields: [emailId], references: [id])
+  assigneeId  String?
+  assignee    User?     @relation(fields: [assigneeId], references: [id])
+  title       String
+  description String?
+  status      String    @default("PROPOSED")
+  requestType String
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // New fields for Reports & OTIF module
-  assignedAt      DateTime?
-  startedAt       DateTime?
-  completedAt     DateTime?
-  completionResult String?  // FULL, PARTIAL, FAILED
-  delayReasonCode  String?
-  delayReasonText  String?
-  isRequiredForCase Boolean @default(true)
+  assignedAt        DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  completionResult  String? // FULL, PARTIAL, FAILED
+  delayReasonCode   String?
+  delayReasonText   String?
+  isRequiredForCase Boolean   @default(true)
 
   // ERP Integration
-  erpDocumentId   String?
-  erpDocument     ErpDocument? @relation("ErpDocumentTasks", fields: [erpDocumentId], references: [id])
+  erpDocumentId String?
+  erpDocument   ErpDocument? @relation("ErpDocumentTasks", fields: [erpDocumentId], references: [id])
 
-  dependencies    TaskDependency[]   @relation("DependentTask")
-  dependents      TaskDependency[]   @relation("DependencyTask")
-  comments        TaskComment[]
-  auditLogs       AuditLog[]
-  statusHistory   TaskStatusHistory[]
+  // Performance tracking for Coordinator KPIs
+  deliveryAccuracy Boolean? // Did delivery match order?
+  onTimePrep       Boolean? // Was prep done on time?
+  onTimeDelivery   Boolean? // Was delivery on time?
+  delayMinutes     Int? // Minutes late (negative = early)
+
+  dependencies  TaskDependency[]    @relation("DependentTask")
+  dependents    TaskDependency[]    @relation("DependencyTask")
+  comments      TaskComment[]
+  auditLogs     AuditLog[]
+  statusHistory TaskStatusHistory[]
 }
 
 model TaskDependency {
-  id              String    @id @default(uuid())
-  dependentId     String
-  dependent       Task      @relation("DependentTask", fields: [dependentId], references: [id])
-  dependencyId    String
-  dependency      Task      @relation("DependencyTask", fields: [dependencyId], references: [id])
-  offsetDays      Int       @default(0)
-  createdAt       DateTime  @default(now())
+  id           String   @id @default(uuid())
+  dependentId  String
+  dependent    Task     @relation("DependentTask", fields: [dependentId], references: [id])
+  dependencyId String
+  dependency   Task     @relation("DependencyTask", fields: [dependencyId], references: [id])
+  offsetDays   Int      @default(0)
+  createdAt    DateTime @default(now())
 
   @@unique([dependentId, dependencyId])
 }
@@ -119,40 +126,40 @@ model TaskComment {
 }
 
 model RoutingRule {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  requestType String
-  priority    Int      @default(0)
-  conditions  String   // Store conditions as JSON string
+  id           String   @id @default(uuid())
+  name         String   @unique
+  requestType  String
+  priority     Int      @default(0)
+  conditions   String // Store conditions as JSON string
   assigneeRole String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model AuditLog {
-  id          String   @id @default(uuid())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  taskId      String?
-  task        Task?    @relation(fields: [taskId], references: [id])
-  action      String
-  details     String   // Store action details as JSON string
-  ipAddress   String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id])
+  action    String
+  details   String // Store action details as JSON string
+  ipAddress String?
+  createdAt DateTime @default(now())
 }
 
 // New models for Reports & OTIF module
 
 model EmailCase {
-  id                    String    @id @default(uuid())
-  emailId               String    @unique
-  email                 Email     @relation(fields: [emailId], references: [id])
-  caseStatus            String    @default("NEW") // NEW, PROPOSED, APPROVED, IN_PROGRESS, DONE, PARTIAL, FAILED, CANCELLED
-  classification        String?   // INBOUND_RECEIPT, OUTBOUND_DELIVERY, DISTRIBUTION, OTHER
-  priority              String?   // HIGH, MEDIUM, LOW
+  id                   String    @id @default(uuid())
+  emailId              String    @unique
+  email                Email     @relation(fields: [emailId], references: [id])
+  caseStatus           String    @default("NEW") // NEW, PROPOSED, APPROVED, IN_PROGRESS, DONE, PARTIAL, FAILED, CANCELLED
+  classification       String? // INBOUND_RECEIPT, OUTBOUND_DELIVERY, DISTRIBUTION, OTHER
+  priority             String? // HIGH, MEDIUM, LOW
   supplierName         String?
-  locationName          String?
+  locationName         String?
   deliveryDueAt        DateTime?
   caseDueAt            DateTime?
   approvedAt           DateTime?
@@ -179,22 +186,22 @@ model EmailCase {
 }
 
 model TaskStatusHistory {
-  id              String    @id @default(uuid())
+  id              String   @id @default(uuid())
   taskId          String
-  task            Task      @relation(fields: [taskId], references: [id])
+  task            Task     @relation(fields: [taskId], references: [id])
   fromStatus      String?
   toStatus        String
   changedByUserId String?
-  changedBy       User?     @relation(fields: [changedByUserId], references: [id])
-  changedAt       DateTime  @default(now())
+  changedBy       User?    @relation(fields: [changedByUserId], references: [id])
+  changedAt       DateTime @default(now())
   note            String?
 
   @@index([taskId, changedAt])
 }
 
 model KpiSnapshot {
-  id                String    @id @default(uuid())
-  periodType        String    // DAY, WEEK, MONTH
+  id                String   @id @default(uuid())
+  periodType        String // DAY, WEEK, MONTH
   periodStart       DateTime
   periodEnd         DateTime
   roleCode          String?
@@ -203,20 +210,20 @@ model KpiSnapshot {
   locationName      String?
 
   // Metrics
-  totalCases        Int       @default(0)
-  otifCases         Int       @default(0)
-  onTimeCases       Int       @default(0)
-  inFullCases       Int       @default(0)
-  overdueCases      Int       @default(0)
-  avgApprovalMinutes Int?
+  totalCases          Int  @default(0)
+  otifCases           Int  @default(0)
+  onTimeCases         Int  @default(0)
+  inFullCases         Int  @default(0)
+  overdueCases        Int  @default(0)
+  avgApprovalMinutes  Int?
   avgExecutionMinutes Int?
 
   // Rates
-  otifRate          Float?
-  onTimeRate        Float?
-  inFullRate        Float?
+  otifRate   Float?
+  onTimeRate Float?
+  inFullRate Float?
 
-  createdAt        DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([periodType, periodStart, periodEnd])
   @@index([roleCode])
@@ -228,30 +235,30 @@ model KpiSnapshot {
 // ERP Integration Models
 
 model RoutePlan {
-  id              String    @id @default(uuid())
-  destinationCode String    @unique
+  id              String   @id @default(uuid())
+  destinationCode String   @unique
   destinationName String
-  routeDay        String    // MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
-  prepOffsetDays  Int       @default(1) // Days before route day for preparation
-  active          Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  routeDay        String // MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
+  prepOffsetDays  Int      @default(1) // Days before route day for preparation
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([routeDay])
   @@index([active])
 }
 
 model ErpImportBatch {
-  id          String    @id @default(uuid())
-  fileName    String
-  status      String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
-  totalRows   Int       @default(0)
-  processedRows Int     @default(0)
-  errorRows   Int       @default(0)
-  errors      String?   // JSON string of errors
-  importedBy  String?   // User ID
-  importedAt  DateTime  @default(now())
-  completedAt DateTime?
+  id            String    @id @default(uuid())
+  fileName      String
+  status        String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  totalRows     Int       @default(0)
+  processedRows Int       @default(0)
+  errorRows     Int       @default(0)
+  errors        String? // JSON string of errors
+  importedBy    String? // User ID
+  importedAt    DateTime  @default(now())
+  completedAt   DateTime?
 
   erpDocuments ErpDocument[]
 
@@ -260,37 +267,89 @@ model ErpImportBatch {
 }
 
 model ErpDocument {
-  id              String    @id @default(uuid())
-  batchId         String?   // Optional for manual/event-created documents
-  batch           ErpImportBatch? @relation(fields: [batchId], references: [id])
-  
-  sourceType      String    // ERP_IMPORT, EMAIL, MANUAL
-  documentType    String    // PURCHASE_ORDER, GOODS_RECEIPT, SALES_ORDER, SHIPMENT_ORDER
-  
+  id      String          @id @default(uuid())
+  batchId String? // Optional for manual/event-created documents
+  batch   ErpImportBatch? @relation(fields: [batchId], references: [id])
+
+  sourceType   String // ERP_IMPORT, EMAIL, MANUAL
+  documentType String // PURCHASE_ORDER, GOODS_RECEIPT, SALES_ORDER, SHIPMENT_ORDER
+
   documentNumber  String
   partnerName     String?
   partnerCode     String?
   destinationName String?
   destinationCode String?
-  
-  lineCount       Int       @default(0)
-  totalQuantity   Int       @default(0)
-  plannedDate     DateTime?
-  
+
+  lineCount     Int       @default(0)
+  totalQuantity Int       @default(0)
+  plannedDate   DateTime?
+
   // Tasks created from this document
-  tasks           Task[]    @relation("ErpDocumentTasks")
+  tasks Task[] @relation("ErpDocumentTasks")
 
   // Legacy - single task link
-  taskId          String?   @unique // FK to Task
-  
+  taskId String? @unique // FK to Task
+
   // Raw data
-  rawPayloadJson  String?   // Original row data as JSON
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  rawPayloadJson String? // Original row data as JSON
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([batchId])
   @@index([documentType])
   @@index([plannedDate])
   @@index([documentNumber])
+}
+
+// Coordinator KPI tracking - stores monthly performance per coordinator
+model CoordinatorKPI {
+  id     String @id @default(uuid())
+  userId String // FK to User
+  user   User   @relation(fields: [userId], references: [id])
+
+  month Int // 1-12
+  year  Int // 2026
+
+  // Auto-calculated from tasks
+  tasksTotal   Int @default(0)
+  tasksDone    Int @default(0)
+  tasksPartial Int @default(0)
+  tasksFailed  Int @default(0)
+  tasksOverdue Int @default(0)
+  tasksOnTime  Int @default(0)
+
+  // Auto KPIs (calculated)
+  accuracy       Int? // Delivery accuracy %
+  otif           Int? // On-time in-full %
+  prepOnTime     Int? // Prep on time %
+  deliveryOnTime Int? // Delivery on time %
+  avgCycleTime   Int? // Avg cycle time in minutes
+
+  // Manual entry KPIs (monthly)
+  tidiness     Int? // 0-100
+  discipline   Int? // 0-100
+  organization Int? // 0-100
+  fuel         Int? // 0-100
+  incidents    Int? // 0-100
+  returns48h   Int? // 0-100
+
+  // Role-specific scores (calculated)
+  receptionScore    Int? // 0-100
+  deliveryScore     Int? // 0-100
+  distributionScore Int? // 0-100
+
+  // Active role for this month (from user assignment)
+  activeRole String? // RECEPTION_COORDINATOR, DELIVERY_COORDINATOR, DISTRIBUTION_COORDINATOR
+
+  // Final score (based on active role)
+  totalScore   Int? // 0-100
+  bonusPercent Int? // 0, 40, 70, 100
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, month, year])
+  @@index([userId])
+  @@index([month, year])
 }
