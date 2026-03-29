@@ -229,7 +229,6 @@ export default function RoutePlansPage() {
                       onClick={() => handleToggleActive(plan)}
                       style={{
                         padding: '4px 12px',
-                        border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         background: plan.active ? '#e8f5e9' : '#fafafa',
