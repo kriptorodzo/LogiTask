@@ -19,7 +19,6 @@ fi
 echo ""
 echo "[2/4] Running Prisma migrations..."
 cd "$PROJECT_DIR/backend"
-export DATABASE_URL="file:./dev.db"
 npx prisma migrate dev
 
 echo ""

@@ -22,7 +22,6 @@ if errorlevel 1 (
 echo.
 echo [2/4] Running Prisma migrations...
 cd /d "%PROJECT_DIR%backend"
-set DATABASE_URL=file:./dev.db
 call npx prisma migrate dev
 
 echo.
