@@ -7,7 +7,6 @@ import { TaskModule } from './task/task.module';
 import { UserModule } from './user/user.module';
 import { NotificationModule } from './notification/notification.module';
 import { ReportsModule } from './reports/reports.module';
-import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -22,7 +21,6 @@ import { CommonModule } from './common/common.module';
     UserModule,
     NotificationModule,
     ReportsModule,
-    CommonModule,
   ],
 })
 export class AppModule {}

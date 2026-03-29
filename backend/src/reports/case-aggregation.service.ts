@@ -332,45 +332,103 @@ export class CaseAggregationService {
 
   /**
    * Determine case status based on task states
+   * Priority order (highest to lowest):
+   * 1. FAILED - any required task failed
+   * 2. DONE - all required tasks done with FULL completion
+   * 3. PARTIAL - all required tasks terminal, at least one partial
+   * 4. IN_PROGRESS - at least one required task is in progress
+   * 5. APPROVED - all required tasks at least approved, none proposed
+   * 6. PROPOSED - at least one required task proposed
+   * 7. CANCELLED - all required tasks cancelled
+   * 8. NEW - no tasks or other state
    */
   private async determineCaseStatus(tasks: any[], requiredTasks: any[]): Promise<CaseStatus> {
+    // If no tasks at all, case is NEW
     if (tasks.length === 0) {
       return CaseStatus.NEW;
     }
 
-    const allCancelled = requiredTasks.length > 0 && requiredTasks.every(t => t.status === TaskStatus.CANCELLED);
-    if (allCancelled) {
+    // If no required tasks, case is determined by optional tasks
+    if (requiredTasks.length === 0) {
+      // Check if any non-cancelled tasks exist
+      const nonCancelledTasks = tasks.filter(t => t.status !== TaskStatus.CANCELLED);
+      if (nonCancelledTasks.length === 0) {
+        return CaseStatus.NEW; // No active tasks
+      }
+      // Use the same logic but with all tasks as "required"
+      return this.determineStatusForTasks(nonCancelledTasks, nonCancelledTasks);
+    }
+
+    // Check CANCELLED first: all required tasks cancelled
+    const allRequiredCancelled = requiredTasks.every(t => t.status === TaskStatus.CANCELLED);
+    if (allRequiredCancelled) {
       return CaseStatus.CANCELLED;
     }
 
-    const proposedCount = tasks.filter(t => t.status === TaskStatus.PROPOSED).length;
-    const approvedCount = tasks.filter(t => t.status === TaskStatus.APPROVED).length;
-    const inProgressCount = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
-    const cancelledCount = tasks.filter(t => t.status === TaskStatus.CANCELLED).length;
-    const nonCancelledCount = tasks.length - cancelledCount;
-
+    // Check for FAILED: any required task with FAILED completion
     if (requiredTasks.some(t => t.completionResult === CompletionResult.FAILED)) {
       return CaseStatus.FAILED;
     }
-    if (requiredTasks.length > 0 && requiredTasks.every(t => 
+
+    // Check for DONE: all required tasks are DONE with FULL completion
+    const allRequiredDoneFull = requiredTasks.every(t => 
       t.status === TaskStatus.DONE && t.completionResult === CompletionResult.FULL
-    )) {
+    );
+    if (allRequiredDoneFull) {
       return CaseStatus.DONE;
     }
-    if (requiredTasks.length > 0 && requiredTasks.every(t => 
+
+    // Check for PARTIAL: all required tasks are terminal (DONE or CANCELLED), at least one PARTIAL
+    const allRequiredTerminal = requiredTasks.every(t => 
       [TaskStatus.DONE, TaskStatus.CANCELLED].includes(t.status as TaskStatus)
-    ) && requiredTasks.some(t => t.completionResult === CompletionResult.PARTIAL)) {
+    );
+    if (allRequiredTerminal && requiredTasks.some(t => t.completionResult === CompletionResult.PARTIAL)) {
       return CaseStatus.PARTIAL;
     }
-    if (inProgressCount > 0 || tasks.some(t => t.startedAt)) {
+
+    // Check for IN_PROGRESS: at least one required task is IN_PROGRESS
+    if (requiredTasks.some(t => t.status === TaskStatus.IN_PROGRESS)) {
       return CaseStatus.IN_PROGRESS;
     }
-    if (approvedCount === nonCancelledCount && approvedCount > 0) {
+
+    // Check for APPROVED: all required tasks at least APPROVED, none PROPOSED
+    const allRequiredApprovedOrBetter = requiredTasks.every(t => 
+      [TaskStatus.APPROVED, TaskStatus.IN_PROGRESS, TaskStatus.DONE].includes(t.status as TaskStatus)
+    );
+    const hasRequiredProposed = requiredTasks.some(t => t.status === TaskStatus.PROPOSED);
+    
+    if (allRequiredApprovedOrBetter && !hasRequiredProposed) {
       return CaseStatus.APPROVED;
     }
-    if (proposedCount > 0 && approvedCount === 0 && inProgressCount === 0) {
+
+    // Check for PROPOSED: at least one required task is PROPOSED
+    if (hasRequiredProposed) {
       return CaseStatus.PROPOSED;
     }
+
+    return CaseStatus.NEW;
+  }
+
+  private determineStatusForTasks(tasks: any[], requiredTasks: any[]): CaseStatus {
+    // Simplified version for when there are no explicit required tasks
+    if (tasks.length === 0) return CaseStatus.NEW;
+    
+    const hasProposed = tasks.some(t => t.status === TaskStatus.PROPOSED);
+    const hasApproved = tasks.some(t => t.status === TaskStatus.APPROVED);
+    const hasInProgress = tasks.some(t => t.status === TaskStatus.IN_PROGRESS);
+    const hasDone = tasks.some(t => t.status === TaskStatus.DONE);
+    const hasCancelled = tasks.every(t => t.status === TaskStatus.CANCELLED);
+    const hasFailed = tasks.some(t => t.completionResult === CompletionResult.FAILED);
+    const hasPartial = tasks.some(t => t.completionResult === CompletionResult.PARTIAL);
+    const allFullDone = tasks.every(t => t.status === TaskStatus.DONE && t.completionResult === CompletionResult.FULL);
+
+    if (hasFailed) return CaseStatus.FAILED;
+    if (allFullDone) return CaseStatus.DONE;
+    if (hasPartial && !hasInProgress) return CaseStatus.PARTIAL;
+    if (hasInProgress) return CaseStatus.IN_PROGRESS;
+    if (hasApproved && !hasProposed) return CaseStatus.APPROVED;
+    if (hasProposed) return CaseStatus.PROPOSED;
+    if (hasCancelled) return CaseStatus.CANCELLED;
     return CaseStatus.NEW;
   }
 
