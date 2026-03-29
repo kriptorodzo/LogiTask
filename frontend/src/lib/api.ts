@@ -259,4 +259,47 @@ export const reportsApi = {
   },
 };
 
+// Performance API (v2)
+export const performanceApi = {
+  getScorecard: async (userId: string, params?: { month?: number; year?: number }) => {
+    const { data } = await apiClient.get(`/performance/scorecard/${userId}`, { params });
+    return data;
+  },
+  getMyScorecard: async (params?: { month?: number; year?: number }) => {
+    const { data } = await apiClient.get('/performance/my-scorecard', { params });
+    return data;
+  },
+  getLeaderboard: async (params?: { month?: number; year?: number; role?: string }) => {
+    const { data } = await apiClient.get('/performance/leaderboard', { params });
+    return data;
+  },
+  getCoordinators: async (params?: { month?: number; year?: number }) => {
+    const { data } = await apiClient.get('/performance/coordinators', { params });
+    return data;
+  },
+  getMetrics: async (userId: string, params?: { month?: number; year?: number }) => {
+    const { data } = await apiClient.get(`/performance/metrics/${userId}`, { params });
+    return data;
+  },
+  updateKPI: async (kpi: {
+    userId: string;
+    month: number;
+    year: number;
+    tidiness?: number;
+    discipline?: number;
+    organization?: number;
+    fuel?: number;
+    incidents?: number;
+    returns48h?: number;
+    activeRole?: string;
+  }) => {
+    const { data } = await apiClient.post('/performance/kpi', kpi);
+    return data;
+  },
+  recalculate: async (userId: string, params?: { month?: number; year?: number }) => {
+    const { data } = await apiClient.post(`/performance/recalculate/${userId}`, null, { params });
+    return data;
+  },
+};
+
 export default apiClient;

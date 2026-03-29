@@ -6,6 +6,7 @@ import { CaseAggregationService } from './case-aggregation.service';
 import { ReportsQueryService } from './reports-query.service';
 import { KpiSnapshotService } from './kpi-snapshot.service';
 import { RolesGuard, Roles } from '../common/guards/roles.guard';
+import { PerformanceService } from '../performance/performance.service';
 
 // Helper to validate date range is within 1 year
 function validateDateRange(from?: string, to?: string): void {
@@ -191,6 +192,7 @@ export class ReportsController {
     private readonly caseAggregationService: CaseAggregationService,
     private readonly reportsQueryService: ReportsQueryService,
     private readonly kpiSnapshotService: KpiSnapshotService,
+    private readonly performanceService: PerformanceService,
   ) {}
 
   /**
@@ -293,7 +295,37 @@ export class ReportsController {
       to: query.to ? new Date(query.to) : undefined,
       roleCode: query.roleCode,
     };
-    return this.reportsQueryService.getCoordinators(filters);
+    const coordinators = await this.reportsQueryService.getCoordinators(filters);
+    
+    // Enrich with bonus data from Performance v2
+    const month = query.from ? new Date(query.from).getMonth() + 1 : new Date().getMonth() + 1;
+    const year = query.from ? new Date(query.from).getFullYear() : new Date().getFullYear();
+    
+    // Get bonus data for each coordinator
+    const enrichedCoordinators = await Promise.all(
+      (coordinators as any[]).map(async (coordinator) => {
+        try {
+          const scorecard = await this.performanceService.getScorecard(coordinator.userId, month, year);
+          return {
+            ...coordinator,
+            bonusScore: scorecard?.totalScore || 0,
+            bonusEligible: scorecard?.bonusEligible || false,
+            bonusCategory: scorecard?.bonusEligible 
+              ? (scorecard.totalScore >= 90 ? 'GOLD' : scorecard.totalScore >= 75 ? 'SILVER' : scorecard.totalScore >= 60 ? 'BRONZE' : 'NONE')
+              : 'NONE',
+          };
+        } catch {
+          return {
+            ...coordinator,
+            bonusScore: 0,
+            bonusEligible: false,
+            bonusCategory: 'NONE',
+          };
+        }
+      })
+    );
+    
+    return enrichedCoordinators;
   }
 
   /**

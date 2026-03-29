@@ -46,7 +46,7 @@
 | 5 | Frontend build passes TypeScript checks | ✅ **FIXED 29 март 2026** |
 | 6 | Coordinator board page implemented | ✅ **CREATED 29 март 2026** |
 | 7 | Coordinator Performance v2 - Backend API | ✅ **COMPLETE 29 март 2026** |
-| 8 | Coordinator Performance v2 - Frontend UI | ⚠️ Pending |
+| 8 | Coordinator Performance v2 - Frontend UI | ✅ **COMPLETE 29 март 2026** |
 | 9 | Local UI regression testing | ✅ Complete (as part of Performance v2) |
 | 10 | Azure AD app registration and redirect URIs verified | ⚠️ Pending (final gate) |
 | 11 | Microsoft Graph permissions verified and real test email fetch confirmed | ⚠️ Pending (final gate) |
@@ -103,8 +103,15 @@
 | Prisma SQLite→PostgreSQL | Code | ✅ Complete |
 | PostgreSQL provisioning | Infrastructure | ✅ **VERIFIED** |
 | Coordinator Performance v2 - Backend | Code | ✅ **COMPLETE** |
-| Coordinator Performance v2 - Frontend | Code | ⚠️ Pending |
+| Coordinator Performance v2 - Frontend | Code | ✅ **COMPLETE** |
+| Reports Bonus Integration | Code | ✅ **COMPLETE** |
+| ERP Monitoring/Endponts | Code | ✅ **COMPLETE** |
+| Audit Logging | Code | ✅ **IMPLEMENTED** |
+| Monitoring Interceptor | Code | ✅ **IMPLEMENTED** |
+| Access Matrix | Code | ✅ **IMPLEMENTED** |
+| User Onboarding | Documentation | ✅ **COMPLETE** |
 | Azure AD / Graph | Infrastructure | ⚠️ Pending |
+| ERP Live Integration | Infrastructure | ⚠️ Pending (needs real ERP) |
 | Pilot Start Date | Management | ⚠️ Pending |
 
 ---
@@ -124,8 +131,14 @@
 - [x] Role-weighted scoring (RECEPTION, DELIVERY, DISTRIBUTION)
 - [x] Bonus calculation (0%, 40%, 70%, 100%)
 
-### Pending (Frontend)
-- [ ] Scorecard component for coordinator dashboard
-- [ ] Leaderboard view (ranking by role)
-- [ ] Admin KPI form (monthly manual input)
-- [ ] Report integration (bonus score in reports) |
+### ✅ Completed (Frontend) - 29 март 2026
+- [x] **Scorecard** - Personal scorecard screen (`/performance/scorecard`)
+- [x] **Leaderboard** - Ranking by role (`/performance/leaderboard`)
+- [x] **Admin KPI Form** - Monthly manual input (`/admin/performance`)
+- [x] API client updated with `performanceApi`
+- [x] **Reports integration** - Bonus score in coordinators report (bonusScore, bonusEligible, bonusCategory)
+- [x] **ERP monitoring** - Batch status endpoints ready
+
+### Completed (Backend) - Bonus Integration ✅
+- [x] ReportsModule imports PerformanceModule
+- [x] GET /api/reports/coordinators enriched with bonus data |
