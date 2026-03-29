@@ -5,7 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { taskApi, userApi } from '@/lib/api';
 import { Task, User, TaskStatus } from '@/types';
-import Header from '@/components/Header';
+import TopBar from '@/components/TopBar';
+import BackButton from '@/components/BackButton';
 
 export default function TaskDetailPage() {
   const { data: session, status } = useSession();
@@ -105,10 +106,19 @@ export default function TaskDetailPage() {
   }
 
   return (
-    <div>
-      <Header isManager={isManager} />
-
-      <div className="container">
+    <>
+      <TopBar 
+        title="Task Details"
+        subtitle={task?.title || 'Loading...'}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/' },
+          { label: 'Task Details' }
+        ]}
+        actions={
+          <BackButton href="/" label="Dashboard" />
+        }
+      />
+      <div className="page-content">
         <div className="grid grid-2">
           {/* Task Info */}
           <div className="card">
@@ -253,6 +263,6 @@ export default function TaskDetailPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

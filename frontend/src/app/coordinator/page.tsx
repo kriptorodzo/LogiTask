@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { taskApi } from '@/lib/api';
 import { Task, TASK_STATUS } from '@/types';
-import Header from '@/components/Header';
+import TopBar from '@/components/TopBar';
 
 type Tab = 'my' | 'in_progress' | 'done' | 'overdue';
 
@@ -133,15 +133,21 @@ export default function CoordinatorPage() {
   }
 
   return (
-    <div className="container">
-      <Header />
-      
-      <div style={{ marginBottom: '20px' }}>
-        <h1>Координаторска табла</h1>
-        <p style={{ color: '#666' }}>
-          Улога: <strong>{userRole}</strong>
-        </p>
-      </div>
+    <>
+      <TopBar 
+        title="Coordinator Board"
+        subtitle={`Your role: ${userRole}`}
+        breadcrumbs={[
+          { label: 'Coordinator Board' }
+        ]}
+      />
+      <div className="page-content">
+        <div style={{ marginBottom: '20px' }}>
+          <h2>Координаторска табла</h2>
+          <p style={{ color: '#666' }}>
+            Улога: <strong>{userRole}</strong>
+          </p>
+        </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #ddd', paddingBottom: '12px' }}>
@@ -266,6 +272,7 @@ export default function CoordinatorPage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

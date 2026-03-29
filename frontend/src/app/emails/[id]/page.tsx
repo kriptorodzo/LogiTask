@@ -5,7 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { emailApi, taskApi, userApi } from '@/lib/api';
 import { Email, Task, User } from '@/types';
-import Header from '@/components/Header';
+import TopBar from '@/components/TopBar';
+import BackButton from '@/components/BackButton';
 
 // Human-readable task type labels
 const TASK_TYPE_LABELS: Record<string, string> = {
@@ -197,23 +198,22 @@ export default function EmailDetailPage() {
   const hasAnyTasks = email.tasks && email.tasks.length > 0;
 
   return (
-    <div>
-      <Header isManager={isManager} />
-
-      <div className="container">
+    <>
+      <TopBar 
+        title="Email Details"
+        subtitle={email?.subject || 'Loading...'}
+        breadcrumbs={[
+          { label: 'Manager Inbox', href: '/manager' },
+          { label: 'Email Details' }
+        ]}
+        actions={
+          <BackButton href="/manager" label="Manager Inbox" />
+        }
+      />
+      <div className="page-content">
         {/* Action Buttons for Manager */}
         {isManager && (
           <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <a href="/manager" style={{ 
-              padding: '8px 16px', 
-              background: '#666', 
-              color: 'white', 
-              textDecoration: 'none', 
-              borderRadius: '4px',
-              display: 'inline-block'
-            }}>
-              ← Назад кон Manager Inbox
-            </a>
             
             {isUnclassified && (
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -577,6 +577,6 @@ export default function EmailDetailPage() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { reportsApi } from '@/lib/api';
 import Link from 'next/link';
+import TopBar from '@/components/TopBar';
 
 interface OverviewMetrics {
   totalCases: number;
@@ -114,37 +115,44 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Reports & OTIF Dashboard</h1>
-        <div className="flex gap-2">
-          <input
-            type="date"
-            value={dateRange.from}
-            onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-            className="px-3 py-2 border rounded"
-          />
-          <span className="self-center">to</span>
-          <input
-            type="date"
-            value={dateRange.to}
-            onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-            className="px-3 py-2 border rounded"
-          />
-          <button
-            onClick={() => setDateRange({ from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] })}
-            className="px-3 py-2 text-gray-600 hover:text-gray-800"
-          >
-            Reset
-          </button>
-          <Link
-            href="/reports/scorecard"
-            className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
+    <>
+      <TopBar 
+        title="Reports & OTIF"
+        subtitle="Operational performance metrics"
+        breadcrumbs={[
+          { label: 'Reports', href: '/reports' },
+          { label: 'OTIF Dashboard' }
+        ]}
+        actions={
+          <Link href="/reports/scorecard" className="btn btn-primary">
             My Scorecard
           </Link>
+        }
+      />
+      <div className="page-content">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={dateRange.from}
+              onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
+              className="px-3 py-2 border rounded"
+            />
+            <span className="self-center">to</span>
+            <input
+              type="date"
+              value={dateRange.to}
+              onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
+              className="px-3 py-2 border rounded"
+            />
+            <button
+              onClick={() => setDateRange({ from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] })}
+              className="px-3 py-2 text-gray-600 hover:text-gray-800"
+            >
+              Reset
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-4 mb-8">
@@ -253,6 +261,7 @@ export default function ReportsPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -80,39 +80,255 @@
 
 ---
 
-## Priority 2 — Frontend operational completion
+## Priority 2 — Frontend modernization & alignment
 
-Иако backend и workflow логиката се зрели, frontend има делумно незатворени сегменти:
+Ова епосебен приоритетен stream, не само „UI polish". Frontend мора да ги отслика сите модули и да има брза навигација.
 
-### Step 2.1: Performance UI screens
-- Personal scorecard
+### Step 2.1: Frontend Audit & UX Map
+
+Фаза на целосен преглед:
+
+**Активности:**
+- Мапирање на сите постоечки frontend screens
+- Споредба со backend modules/endpoints
+- Листа на missing screens
+- Листа на broken/incomplete flows
+- UX audit за navigation pain points
+- Дефинирање на стандарден layout system
+
+**Deliverable:** Frontend Gap Analysis, Screen Inventory, Navigation Map
+
+**File:** `frontend/src/app/`
+**Method:** Create audit document
+
+---
+
+### Step 2.2: New app shell и глобална навигација
+
+Основа за модерна веб апликација:
+
+**Треба да се воведе:**
+- **Persistent sidebar** со модули
+- **Top header**
+- **Breadcrumbs** на секој внатрешен екран
+- **Global back button** на detail/report/edit screens
+- **Quick actions**
+- **Module switching without confusion**
+
+**Sidebar модули:**
+- Dashboard
+- Manager Inbox
+- Coordinator Board
+- Reports
+- ERP
+- Performance
+- Admin / Settings
+
+**На секој screen:**
+- Title
+- Subtitle / context
+- Breadcrumb
+- Back button кога има detail page
+- Action barово
+
+**Files:** `frontend/src/components/layout/`
+**Method:** Create app shell components
+
+---
+
+### Step 2.3: Manager module alignment
+
+Целосно action-oriented:
+
+**Tabs:**
+- Нови
+- Чека одобрување
+- Делегирани
+- Проблематични
+- Доцне
+
+**Функционалност:**
+- Search + filters
+- Card actions
+- Detail screen со back navigation
+- Approval flows
+
+**Files:** `frontend/src/app/manager/`
+**Method:** Update manager screens
+
+---
+
+### Step 2.4: Coordinator module alignment
+
+**Табеви:**
+- Мои задачи
+- Во тек
+- Завршени
+- Доцне
+
+**Функционалност:**
+- Quick start/complete
+- Filter by date/status/source
+- ERP badge / Email badge
+- Task details со враќање назад
+
+**Files:** `frontend/src/app/coordinator/`
+**Method:** Update coordinator screens
+
+---
+
+### Step 2.5: Reports module UX fix
+
+Главно подобрување на UX:
+
+**Компоненти:**
+- Overview cards
+- KPI cards
+- OTIF chart
+- Filters
+- Drilldown tables
+- **Back button**
+- Breadcrumb: Reports > Cases > Case Detail
+- Export actions
+- Empty/error handling
+
+**Навигација:**
+- Од Reports > Cases > Case Detail корисникот мора со еден клик да се врати
+- Или на Cases list
+- Или на Reports overview
+
+**Files:** `frontend/src/app/reports/`
+**Method:** Fix reports navigation
+
+---
+
+### Step 2.6: ERP module alignment
+
+**Страници:**
+- ERP dashboard
+- Import page
+- Routes page
+- Documents page
+- Batch details
+- Route detail/edit
+- Import history
+- Validation results
+
+**Files:** `frontend/src/app/erp/`
+**Method:** Complete ERP screens
+
+---
+
+### Step 2.7: Performance v2 module UI
+
+Нов frontend stream:
+
+**Компоненти:**
 - Leaderboard
-- Monthly KPI input screen
+- Scorecard
+- Monthly KPI input
+- Filters by month/user/role
+- Role-based views
+- Bonus bands visualization
 
-**File:** `frontend/src/app/performance/`
-**Method:** Create performance screens
+**Files:** `frontend/src/app/performance/`
+**Method:** Create performance v2 screens
 
-### Step 2.2: Reports UX improvements
-- Подобрување на reports UX
-- Filters/drilldowns
+---
 
-**File:** `frontend/src/app/reports/`
-**Method:** Improve reports UI
+### Step 2.8: UI/UX модернизација
 
-### Step 2.3: Manager/coordinator dashboards polish
-- Polish на manager/coordinator dashboards
-- Состојби за loading / empty / error / validation
+Дизајн насока кон модерен SaaS dashboard:
 
-**File:** `frontend/src/app/`
-**Method:** Dashboard improvements
+**Принципи:**
+- Clean white/neutral background
+- Cards with soft shadow
+- Rounded corners
+- Consistent spacing
+- Clear typography hierarchy
+- Status colors only where meaningful
+- Less clutter, more focus
 
-### Step 2.4: Mobile and usability verification
-- Мобилна и usability проверка за pilot корисници
+**Стандардизација на компоненти:**
+- Buttons
+- Tabs
+- Badges
+- Cards
+- Tables
+- Filters
+- Modal dialogs
+- Empty states
+- Error states
+- Loading skeletons
+- Detail panels
 
-**File:** `frontend/src/app/`
-**Method:** Mobile testing
+**Files:** `frontend/src/components/`
+**Method:** UI component standardization
 
-**Резултат:** функционален и стабилен pilot UI
+---
+
+### Step 2.9: Навигација — конкретни правила
+
+**Треба да има:**
+- **Back button** на секој detail/report/import/edit screen
+- **Breadcrumbs** на секој внатрешен екран
+- **Active module highlight** во sidebar
+- **Quick jump** меѓу поврзани модули
+- **Recent context preservation** (враќање на ист filter/list state)
+
+**Files:** `frontend/src/app/`
+**Method:** Implement navigation patterns
+
+---
+
+### Step 2.10: Подобрување на брзина
+
+**Frontend performance задачи:**
+- Code splitting по модул
+- Lazy loading на heavy pages
+- Memoization на expensive components
+- Pagination / virtualization за долгите листи
+- Debounce на search/filter
+- Cache на API results
+- Помалку full page reload patterns
+- Optimistic UI за quick actions
+- Prefetch на најчесто отварани рути
+
+**UX performance:**
+- Skeleton loaders наместо blank screens
+- Instant tab switching
+- Задржување на filter state
+- Побрзо отворање на detail views
+- Избегнување непотребни refetch calls
+
+**Files:** `frontend/src/`
+**Method:** Performance optimization
+
+---
+
+### Sprint редослед:
+
+**Sprint A — Navigation Foundation**
+- Фокус: app shell, sidebar, breadcrumbs, back button, route consistency
+- Излез: апликацијата веднаш станува попрофесионална
+
+**Sprint B — Reports & Detail UX Fix**
+- Фокус: reports navigation, drilldown usability, back flow
+- Излез: Reports стануваат навистина употребливи
+
+**Sprint C — Module Alignment**
+- Фокус: manager, coordinator, ERP, detail/edit pages
+- Излез: Frontend е усогласен со platform capabilities
+
+**Sprint D — Performance v2 UI**
+- Фокус: scorecards, leaderboard, KPI input
+- Излез: Затворен нов business module
+
+**Sprint E — Speed & Polish**
+- Фокус: loading states, performance, responsiveness
+- Излез: Modern pilot-ready frontend
+
+**Резултат:** Целосно усогласен frontend со модерен SaaS изглед, брза навигација, јасен app shell
 
 ---
 

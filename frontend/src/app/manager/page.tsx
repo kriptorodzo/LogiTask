@@ -209,9 +209,15 @@ export default function ManagerInboxPage() {
   };
 
   return (
-    <div>
-      <Header isManager={true} />
-      <div className="container">
+    <>
+      <TopBar 
+        title="Manager Inbox"
+        subtitle="Review and approve tasks from email processing"
+        breadcrumbs={[
+          { label: 'Manager Inbox' }
+        ]}
+      />
+      <div className="page-content">
         <h1 style={{ marginBottom: '24px' }}>📋 Manager Dashboard</h1>
         
         {/* Tabs */}
@@ -409,6 +415,6 @@ export default function ManagerInboxPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

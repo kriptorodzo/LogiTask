@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import TopBar from '@/components/TopBar';
 
 interface ErpDocument {
   id: string;
@@ -89,11 +90,18 @@ export default function ErpAdminPage() {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>ERP Administration</h1>
-        <p style={{ color: '#666' }}>Manage ERP imports, documents, and route plans</p>
-      </div>
+    <>
+      <TopBar 
+        title="ERP Administration"
+        subtitle="Manage ERP imports, documents, and route plans"
+        breadcrumbs={[
+          { label: 'ERP', href: '/admin/erp' }
+        ]}
+      />
+      <div className="page-content">
+        <div style={{ marginBottom: '24px' }}>
+          <h2>ERP Administration</h2>
+        </div>
 
       {/* Quick Actions */}
       <div style={{ 
@@ -279,6 +287,7 @@ export default function ErpAdminPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

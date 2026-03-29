@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { performanceApi } from '@/lib/api';
+import TopBar from '@/components/TopBar';
 
 interface LeaderboardEntry {
   rank: number;
@@ -117,11 +118,20 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Листа на перформанси</h1>
-        <div className="flex gap-2 items-center">
+    <>
+      <TopBar 
+        title="Performance Leaderboard"
+        subtitle="Monthly coordinator rankings by OTIF score"
+        breadcrumbs={[
+          { label: 'Performance', href: '/performance/leaderboard' },
+          { label: 'Leaderboard' }
+        ]}
+      />
+      <div className="page-content">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">Листа на перформанси</h2>
+          <div className="flex gap-2 items-center">
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
@@ -219,6 +229,7 @@ export default function LeaderboardPage() {
           <span className="text-xl">🥉</span> <span>Трето место</span>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
