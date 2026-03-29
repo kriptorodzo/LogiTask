@@ -260,8 +260,8 @@ model ErpImportBatch {
 
 model ErpDocument {
   id              String    @id @default(uuid())
-  batchId         String
-  batch           ErpImportBatch @relation(fields: [batchId], references: [id])
+  batchId         String?   // Optional for manual/event-created documents
+  batch           ErpImportBatch? @relation(fields: [batchId], references: [id])
   
   sourceType      String    // ERP_IMPORT, EMAIL, MANUAL
   documentType    String    // PURCHASE_ORDER, GOODS_RECEIPT, SALES_ORDER, SHIPMENT_ORDER

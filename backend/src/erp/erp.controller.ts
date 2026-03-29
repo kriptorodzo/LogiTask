@@ -154,6 +154,41 @@ export class ErpController {
   }
 
   /**
+   * POST /api/erp/event
+   * Simulate ERP event (SALES_ORDER_CREATED, SHIPMENT_CREATED, etc.)
+   * For testing workflow logic
+   */
+  @Post('event')
+  async handleErpEvent(@Body() body: {
+    event: string;
+    documentType: string;
+    documentNumber: string;
+    partnerName?: string;
+    destinationName?: string;
+    destinationCode?: string;
+    lineCount?: number;
+    totalQuantity?: number;
+    plannedDate?: string;
+    relatedDocumentNumber?: string;
+  }) {
+    const result = await this.erpImportService.handleErpEvent(body.event, body);
+    return result;
+  }
+
+  /**
+   * GET /api/erp/document/:id
+   * Get document with all its tasks
+   */
+  @Get('document/:id')
+  async getDocument(@Param('id') id: string) {
+    const document = await this.erpImportService.getDocumentWithTasks(id);
+    if (!document) {
+      throw new BadRequestException('Document not found');
+    }
+    return document;
+  }
+
+  /**
    * Simple CSV/JSON parser from file
    */
   private parseFile(file: any): ErpImportRow[] {

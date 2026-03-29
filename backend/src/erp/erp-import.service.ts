@@ -8,6 +8,8 @@ import {
   getNextRouteDate,
   getRouteDate,
   formatDate,
+  buildTaskDescription,
+  ERP_TASK_ROLES,
 } from './erp.constants';
 import { UserService } from '../user/user.service';
 
@@ -21,6 +23,7 @@ export interface ErpImportRow {
   lineCount?: number;
   totalQuantity?: number;
   plannedDate?: string;
+  relatedDocumentNumber?: string;
 }
 
 export interface ErpImportResult {
@@ -33,8 +36,21 @@ export interface ErpImportResult {
     id: string;
     documentNumber: string;
     documentType: string;
-    taskId?: string;
+    taskIds: string[];
   }>;
+}
+
+export interface ErpEventResult {
+  event: string;
+  documentId: string;
+  tasks: Array<{
+    id: string;
+    title: string;
+    assigneeRole: string;
+    status: string;
+    dueDate?: string;
+  }>;
+  autoCompletedTasks?: string[];
 }
 
 @Injectable()
@@ -44,15 +60,11 @@ export class ErpImportService {
     private userService: UserService,
   ) {}
 
-  /**
-   * Import ERP documents from parsed rows
-   */
   async importDocuments(
     rows: ErpImportRow[],
     fileName: string,
     importedBy?: string,
   ): Promise<ErpImportResult> {
-    // Create batch record
     const batch = await this.prisma.erpImportBatch.create({
       data: {
         fileName,
@@ -71,19 +83,13 @@ export class ErpImportService {
         try {
           const doc = await this.processRow(row, batch.id);
           if (doc) {
-            documents.push({
-              id: doc.id,
-              documentNumber: doc.documentNumber,
-              documentType: doc.documentType,
-              taskId: doc.taskId || undefined,
-            });
+            documents.push(doc);
           }
         } catch (error: any) {
           errors.push(`Row ${i + 1}: ${error.message}`);
         }
       }
 
-      // Update batch status
       await this.prisma.erpImportBatch.update({
         where: { id: batch.id },
         data: {
@@ -106,7 +112,6 @@ export class ErpImportService {
         documents,
       };
     } catch (error: any) {
-      // Update batch as failed
       await this.prisma.erpImportBatch.update({
         where: { id: batch.id },
         data: {
@@ -119,27 +124,16 @@ export class ErpImportService {
     }
   }
 
-  /**
-   * Process a single row and create ERP document + task
-   */
-  private async processRow(row: ErpImportRow, batchId: string): Promise<{
-    id: string;
-    documentNumber: string;
-    documentType: string;
-    taskId?: string;
-  } | null> {
-    // Validate required fields
+  private async processRow(row: ErpImportRow, batchId: string): Promise<ErpImportResult['documents'][0] | null> {
     if (!row.documentType || !row.documentNumber) {
       throw new Error('Missing documentType or documentNumber');
     }
 
-    // Normalize document type
     const docType = this.normalizeDocumentType(row.documentType);
     if (!docType) {
       throw new Error(`Invalid documentType: ${row.documentType}`);
     }
 
-    // Parse planned date if provided
     let plannedDate: Date | undefined;
     if (row.plannedDate) {
       plannedDate = new Date(row.plannedDate);
@@ -148,7 +142,6 @@ export class ErpImportService {
       }
     }
 
-    // Create ERP document
     const erpDocument = await this.prisma.erpDocument.create({
       data: {
         batchId,
@@ -166,111 +159,190 @@ export class ErpImportService {
       },
     });
 
-    // Create task based on document type
-    const task = await this.createErpTask(erpDocument);
-
-    if (task) {
-      // Update document with task ID
-      await this.prisma.erpDocument.update({
-        where: { id: erpDocument.id },
-        data: { taskId: task.id },
-      });
-
-      return {
-        id: erpDocument.id,
-        documentNumber: erpDocument.documentNumber,
-        documentType: erpDocument.documentType,
-        taskId: task.id,
-      };
-    }
+    const result = await this.createErpTasks(erpDocument, row.relatedDocumentNumber);
 
     return {
       id: erpDocument.id,
       documentNumber: erpDocument.documentNumber,
       documentType: erpDocument.documentType,
+      taskIds: result.taskIds,
     };
   }
 
-  /**
-   * Create task from ERP document
-   */
-  private async createErpTask(erpDocument: any): Promise<any> {
-    const template = ERP_TASK_TEMPLATES[erpDocument.documentType as keyof typeof ERP_TASK_TEMPLATES];
-    if (!template) {
-      return null;
+  async handleErpEvent(event: string, data: {
+    documentType: string;
+    documentNumber: string;
+    partnerName?: string;
+    destinationName?: string;
+    destinationCode?: string;
+    lineCount?: number;
+    totalQuantity?: number;
+    plannedDate?: string;
+    relatedDocumentNumber?: string;
+  }): Promise<ErpEventResult> {
+    const docType = this.normalizeDocumentType(data.documentType);
+    if (!docType) {
+      throw new Error(`Invalid documentType: ${data.documentType}`);
     }
 
-    // Find user with the required role
-    const users = await this.userService.getCoordinatorsByRole(template.assigneeRole);
-    const assignee = users.length > 0 ? users[0] : null;
-    if (!assignee) {
-      console.warn(`No user found with role ${template.assigneeRole}`);
-      return null;
+    let plannedDate: Date | undefined;
+    if (data.plannedDate) {
+      plannedDate = new Date(data.plannedDate);
     }
 
-    // Calculate due date based on route plan
-    let dueDate: Date | undefined;
-    let description = '';
+    let erpDocument = await this.prisma.erpDocument.findFirst({
+      where: { documentNumber: data.documentNumber },
+    });
 
-    // Add partner/destination info to description
-    if (erpDocument.partnerName) {
-      description += `Partner: ${erpDocument.partnerName}\n`;
-    }
-    if (erpDocument.destinationName) {
-      description += `Destination: ${erpDocument.destinationName}\n`;
-    }
-    if (erpDocument.lineCount) {
-      description += `Line items: ${erpDocument.lineCount}\n`;
-    }
-    if (erpDocument.totalQuantity) {
-      description += `Total quantity: ${erpDocument.totalQuantity}\n`;
+    if (!erpDocument) {
+      erpDocument = await this.prisma.erpDocument.create({
+        data: {
+          batchId: null,
+          sourceType: ERP_SOURCE_TYPES.MANUAL,
+          documentType: docType,
+          documentNumber: data.documentNumber,
+          partnerName: data.partnerName || null,
+          partnerCode: null,
+          destinationName: data.destinationName || null,
+          destinationCode: data.destinationCode || null,
+          lineCount: data.lineCount || 0,
+          totalQuantity: data.totalQuantity || 0,
+          plannedDate,
+        } as any,
+      });
     }
 
-    // Check for route plan if destination exists
+    const result = await this.createErpTasks(erpDocument, data.relatedDocumentNumber, true);
+
+    return {
+      event,
+      documentId: erpDocument.id,
+      tasks: result.tasks,
+      autoCompletedTasks: result.autoCompleted,
+    };
+  }
+
+  private async createErpTasks(
+    erpDocument: any,
+    relatedDocumentNumber?: string,
+    isEvent = false,
+  ): Promise<{ taskIds: string[]; tasks: any[]; autoCompleted: string[] }> {
+    const docType = erpDocument.documentType;
+    const templates = ERP_TASK_TEMPLATES[docType];
+
+    if (!templates || templates.length === 0) {
+      return { taskIds: [], tasks: [], autoCompleted: [] };
+    }
+
+    const taskIds: string[] = [];
+    const tasks: any[] = [];
+    const autoCompleted: string[] = [];
+
+    let routePlan: any = null;
     if (erpDocument.destinationCode) {
-      const routePlan = await this.prisma.routePlan.findUnique({
+      routePlan = await this.prisma.routePlan.findUnique({
         where: { destinationCode: erpDocument.destinationCode },
       });
+    }
 
-      if (routePlan && routePlan.active) {
-        if (erpDocument.documentType === ERP_DOCUMENT_TYPES.SALES_ORDER ||
-            erpDocument.documentType === ERP_DOCUMENT_TYPES.SHIPMENT_ORDER) {
-          // Distribution task - use route day
-          dueDate = getRouteDate(routePlan.routeDay);
-          description += `Route day: ${routePlan.routeDay}\n`;
-        } else {
-          // Receiving task - use prep offset
-          dueDate = getNextRouteDate(routePlan.routeDay, routePlan.prepOffsetDays);
-          description += `Prep offset: ${routePlan.prepOffsetDays} days before route`;
+    // SHIPMENT_ORDER: auto-complete "Подготви" from related SALES_ORDER
+    if (docType === ERP_DOCUMENT_TYPES.SHIPMENT_ORDER && relatedDocumentNumber) {
+      const relatedDoc = await this.prisma.erpDocument.findFirst({
+        where: { documentNumber: relatedDocumentNumber },
+      });
+
+      if (relatedDoc) {
+        const prepareTask = await this.prisma.task.findFirst({
+          where: {
+            erpDocumentId: relatedDoc.id,
+            title: 'Подготви',
+            status: { in: ['ASSIGNED', 'IN_PROGRESS'] },
+          },
+        });
+
+        if (prepareTask) {
+          await this.prisma.task.update({
+            where: { id: prepareTask.id },
+            data: {
+              status: 'DONE',
+              completedAt: new Date(),
+              completionResult: 'FULL',
+            },
+          });
+          autoCompleted.push(prepareTask.id);
         }
       }
     }
 
-    // If no route plan, use planned date or today
-    if (!dueDate && erpDocument.plannedDate) {
-      dueDate = erpDocument.plannedDate;
-    } else if (!dueDate) {
-      dueDate = new Date();
+    for (const template of templates) {
+      const assignee = await this.getAssigneeByRole(template.assigneeRole);
+      
+      let dueDate: Date | undefined;
+      let description = buildTaskDescription(docType, {
+        partnerName: erpDocument.partnerName,
+        destinationName: erpDocument.destinationName,
+        destinationCode: erpDocument.destinationCode,
+        lineCount: erpDocument.lineCount,
+        totalQuantity: erpDocument.totalQuantity,
+        documentNumber: erpDocument.documentNumber,
+        plannedDate: erpDocument.plannedDate,
+        routeDay: routePlan?.routeDay,
+      });
+
+      if (docType === ERP_DOCUMENT_TYPES.SALES_ORDER) {
+        if (routePlan && routePlan.active) {
+          dueDate = getNextRouteDate(routePlan.routeDay, routePlan.prepOffsetDays);
+        } else {
+          dueDate = erpDocument.plannedDate || new Date();
+        }
+      } else if (docType === ERP_DOCUMENT_TYPES.SHIPMENT_ORDER) {
+        if (routePlan && routePlan.active) {
+          dueDate = getRouteDate(routePlan.routeDay);
+        } else {
+          dueDate = erpDocument.plannedDate || new Date();
+        }
+      } else {
+        dueDate = erpDocument.plannedDate || new Date();
+      }
+
+      const task = await this.prisma.task.create({
+        data: {
+          title: template.title,
+          description,
+          status: 'ASSIGNED',
+          requestType: template.requestType,
+          assigneeId: assignee?.id,
+          dueDate,
+          erpDocumentId: erpDocument.id,
+          assignedAt: new Date(),
+        },
+      });
+
+      taskIds.push(task.id);
+      tasks.push({
+        id: task.id,
+        title: task.title,
+        assigneeRole: template.assigneeRole,
+        status: task.status,
+        dueDate: task.dueDate?.toISOString(),
+      });
+
+      if (taskIds.length === 1) {
+        await this.prisma.erpDocument.update({
+          where: { id: erpDocument.id },
+          data: { taskId: task.id },
+        });
+      }
     }
 
-    // Create task
-    return this.prisma.task.create({
-      data: {
-        title: template.title,
-        description: description.trim(),
-        status: 'ASSIGNED', // No PROPOSED for ERP - goes directly to ASSIGNED
-        requestType: template.requestType,
-        assigneeId: assignee.id,
-        dueDate,
-        erpDocumentId: erpDocument.id,
-        assignedAt: new Date(),
-      },
-    });
+    return { taskIds, tasks, autoCompleted };
   }
 
-  /**
-   * Normalize document type string
-   */
+  private async getAssigneeByRole(role: string): Promise<any> {
+    const users = await this.userService.getCoordinatorsByRole(role);
+    return users.length > 0 ? users[0] : null;
+  }
+
   private normalizeDocumentType(type: string): string | null {
     const normalized = type.toUpperCase().trim().replace(/[\s-]/g, '_');
     
@@ -288,24 +360,13 @@ export class ErpImportService {
     return typeMap[normalized] || null;
   }
 
-  /**
-   * Get import batch status
-   */
   async getBatchStatus(batchId: string) {
     const batch = await this.prisma.erpImportBatch.findUnique({
       where: { id: batchId },
-      include: {
-        erpDocuments: {
-          include: {
-            // task: true, // No relation, query separately
-          },
-        },
-      },
+      include: { erpDocuments: true },
     });
 
-    if (!batch) {
-      return null;
-    }
+    if (!batch) return null;
 
     return {
       ...batch,
@@ -314,9 +375,6 @@ export class ErpImportService {
     };
   }
 
-  /**
-   * Get all route plans
-   */
   async getRoutePlans(activeOnly = true) {
     return this.prisma.routePlan.findMany({
       where: activeOnly ? { active: true } : {},
@@ -324,9 +382,6 @@ export class ErpImportService {
     });
   }
 
-  /**
-   * Create or update route plan
-   */
   async upsertRoutePlan(data: {
     destinationCode: string;
     destinationName: string;
@@ -350,5 +405,20 @@ export class ErpImportService {
         active: data.active ?? true,
       },
     });
+  }
+
+  async getDocumentWithTasks(documentId: string) {
+    const document = await this.prisma.erpDocument.findUnique({
+      where: { id: documentId },
+    });
+
+    if (!document) return null;
+
+    const tasks = await this.prisma.task.findMany({
+      where: { erpDocumentId: documentId },
+      include: { assignee: true },
+    });
+
+    return { ...document, tasks };
   }
 }

@@ -32,37 +32,66 @@ export const ROUTE_DAYS = {
 
 // Role codes for ERP task assignment
 export const ERP_TASK_ROLES = {
-  RECEIVING_COORDINATOR: 'RECEIVING_COORDINATOR', // For PURCHASE_ORDER, GOODS_RECEIPT
-  SHIPPING_COORDINATOR: 'SHIPPING_COORDINATOR',    // For SALES_ORDER, SHIPMENT_ORDER
-  DISTRIBUTION_COORDINATOR: 'DISTRIBUTION_COORDINATOR', // For distribution tasks
+  RECEIVING_COORDINATOR: 'RECEIVING_COORDINATOR',
+  DELIVERY_COORDINATOR: 'DELIVERY_COORDINATOR',
+  DISTRIBUTION_COORDINATOR: 'DISTRIBUTION_COORDINATOR',
 } as const;
 
-// Task titles by document type
-export const ERP_TASK_TEMPLATES = {
-  [ERP_DOCUMENT_TYPES.PURCHASE_ORDER]: {
-    title: 'Планирај простор за прием',
-    requestType: 'ERP_RECEIVING',
-    assigneeRole: ERP_TASK_ROLES.RECEIVING_COORDINATOR,
-    status: 'ASSIGNED',
-  },
-  [ERP_DOCUMENT_TYPES.GOODS_RECEIPT]: {
-    title: 'Заврши прием',
-    requestType: 'ERP_RECEIVING',
-    assigneeRole: ERP_TASK_ROLES.RECEIVING_COORDINATOR,
-    status: 'ASSIGNED',
-  },
-  [ERP_DOCUMENT_TYPES.SALES_ORDER]: {
-    title: 'Подготви за испорака',
-    requestType: 'ERP_SHIPPING',
-    assigneeRole: ERP_TASK_ROLES.SHIPPING_COORDINATOR,
-    status: 'ASSIGNED',
-  },
-  [ERP_DOCUMENT_TYPES.SHIPMENT_ORDER]: {
-    title: 'Подготви за испорака',
-    requestType: 'ERP_SHIPPING',
-    assigneeRole: ERP_TASK_ROLES.SHIPPING_COORDINATOR,
-    status: 'ASSIGNED',
-  },
+// Task templates by event type
+export interface ErpTaskTemplate {
+  title: string;
+  requestType: string;
+  assigneeRole: string;
+  status: string;
+  dependsOnEvent?: string; // For SHIPMENT logic
+}
+
+export const ERP_TASK_TEMPLATES: Record<string, ErpTaskTemplate[]> = {
+  // Purchase Order → Single task for receiving
+  [ERP_DOCUMENT_TYPES.PURCHASE_ORDER]: [
+    {
+      title: 'Планирај простор за прием',
+      requestType: 'ERP_RECEIVING',
+      assigneeRole: ERP_TASK_ROLES.RECEIVING_COORDINATOR,
+      status: 'ASSIGNED',
+    },
+  ],
+
+  // Goods Receipt → Single task for receiving
+  [ERP_DOCUMENT_TYPES.GOODS_RECEIPT]: [
+    {
+      title: 'Заврши прием',
+      requestType: 'ERP_RECEIVING',
+      assigneeRole: ERP_TASK_ROLES.RECEIVING_COORDINATOR,
+      status: 'ASSIGNED',
+    },
+  ],
+
+  // Sales Order → 2 tasks: prepare + plan distribution
+  [ERP_DOCUMENT_TYPES.SALES_ORDER]: [
+    {
+      title: 'Подготви',
+      requestType: 'ERP_DELIVERY',
+      assigneeRole: ERP_TASK_ROLES.DELIVERY_COORDINATOR,
+      status: 'ASSIGNED',
+    },
+    {
+      title: 'Планирај дистрибуција',
+      requestType: 'ERP_DISTRIBUTION',
+      assigneeRole: ERP_TASK_ROLES.DISTRIBUTION_COORDINATOR,
+      status: 'ASSIGNED',
+    },
+  ],
+
+  // Shipment → Auto-complete prepare, create distribute task
+  [ERP_DOCUMENT_TYPES.SHIPMENT_ORDER]: [
+    {
+      title: 'Дистрибуирај',
+      requestType: 'ERP_DISTRIBUTION',
+      assigneeRole: ERP_TASK_ROLES.DISTRIBUTION_COORDINATOR,
+      status: 'ASSIGNED',
+    },
+  ],
 } as const;
 
 // Days of week mapping
@@ -83,11 +112,7 @@ export function getNextRouteDate(
   const today = new Date();
   const targetDayOfWeek = DAY_MAP[routeDay] ?? 1;
   
-  // Find days until target day
-  const currentDayOfWeek = today.getDay();
-  let daysUntilRoute = targetDayOfWeek - currentDayOfWeek;
-  
-  // If today is the route day or already passed, get next week's
+  let daysUntilRoute = targetDayOfWeek - today.getDay();
   if (daysUntilRoute <= 0) {
     daysUntilRoute += 7;
   }
@@ -95,7 +120,6 @@ export function getNextRouteDate(
   const routeDate = new Date(today);
   routeDate.setDate(today.getDate() + daysUntilRoute);
   
-  // Subtract prep offset days
   const prepDate = new Date(routeDate);
   prepDate.setDate(routeDate.getDate() - prepOffsetDays);
   
@@ -118,4 +142,46 @@ export function getRouteDate(routeDay: string): Date {
 
 export function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
+}
+
+// Description builders for task templates
+export function buildTaskDescription(
+  documentType: string,
+  data: {
+    partnerName?: string;
+    partnerCode?: string;
+    destinationName?: string;
+    destinationCode?: string;
+    lineCount?: number;
+    totalQuantity?: number;
+    documentNumber?: string;
+    plannedDate?: Date;
+    routeDay?: string;
+  }
+): string {
+  let desc = '';
+
+  if (data.documentNumber) {
+    desc += `Документ: ${data.documentNumber}\n`;
+  }
+  if (data.partnerName) {
+    desc += `Партнер: ${data.partnerName}\n`;
+  }
+  if (data.destinationName) {
+    desc += `Доставно место: ${data.destinationName}\n`;
+  }
+  if (data.lineCount) {
+    desc += `Артикли: ${data.lineCount}\n`;
+  }
+  if (data.totalQuantity) {
+    desc += `Количина: ${data.totalQuantity}\n`;
+  }
+  if (data.routeDay) {
+    desc += `Ден на рута: ${data.routeDay}\n`;
+  }
+  if (data.plannedDate) {
+    desc += `Планиран датум: ${formatDate(data.plannedDate)}\n`;
+  }
+
+  return desc.trim();
 }
