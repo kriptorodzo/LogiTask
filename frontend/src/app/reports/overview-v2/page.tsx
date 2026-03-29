@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { reportsApi } from '@/lib/api';
 import Header from '@/components/Header';
 
@@ -86,6 +86,161 @@ function StatusCard({ status, count, onClick }: StatusCardProps) {
   );
 }
 
+interface TrendDataPoint {
+  period: string;
+  totalCases: number;
+  otifRate: number;
+  onTimeRate: number;
+  inFullRate: number;
+}
+
+interface SimpleLineChartProps {
+  data: TrendDataPoint[];
+  height?: number;
+}
+
+function SimpleLineChart({ data, height = 200 }: SimpleLineChartProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  useEffect(() => {
+    if (!canvasRef.current || data.length === 0) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Set canvas size
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    ctx.scale(2, 2);
+    
+    const width = rect.width;
+    const chartHeight = height - 40;
+    const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+    const chartWidth = width - padding.left - padding.right;
+    
+    // Clear canvas
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Find max value for scaling
+    const maxValue = 100; // Always 100 for percentages
+    const minValue = 0;
+    const range = maxValue - minValue;
+    
+    // Draw grid lines
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = padding.top + (chartHeight / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(width - padding.right, y);
+      ctx.stroke();
+      
+      // Labels
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${100 - i * 25}%`, padding.left - 5, y + 3);
+    }
+    
+    // Calculate point positions
+    const getX = (index: number) => padding.left + (index / (data.length - 1 || 1)) * chartWidth;
+    const getY = (value: number) => padding.top + ((maxValue - value) / range) * chartHeight;
+    
+    // Draw lines for each metric
+    const metrics = [
+      { key: 'otifRate', color: '#10b981', label: 'OTIF' },
+      { key: 'onTimeRate', color: '#3b82f6', label: 'On-Time' },
+      { key: 'inFullRate', color: '#8b5cf6', label: 'In-Full' },
+    ];
+    
+    metrics.forEach((metric, metricIndex) => {
+      // Draw line
+      ctx.strokeStyle = metric.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      data.forEach((point, i) => {
+        const value = point[metric.key as keyof TrendDataPoint] as number;
+        const x = getX(i);
+        const y = getY(value);
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.stroke();
+      
+      // Draw points
+      data.forEach((point, i) => {
+        const value = point[metric.key as keyof TrendDataPoint] as number;
+        const x = getX(i);
+        const y = getY(value);
+        
+        ctx.fillStyle = metric.color;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+    
+    // Draw X-axis labels
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    
+    // Show every nth label based on data length
+    const step = Math.max(1, Math.floor(data.length / 6));
+    data.forEach((point, i) => {
+      if (i % step === 0 || i === data.length - 1) {
+        const x = getX(i);
+        const label = point.period.length > 8 ? point.period.substring(5) : point.period;
+        ctx.fillText(label, x, height - 10);
+      }
+    });
+    
+    // Draw legend
+    const legendY = height - 25;
+    const legendStartX = width / 2 - 100;
+    metrics.forEach((metric, i) => {
+      const x = legendStartX + i * 80;
+      
+      // Line
+      ctx.strokeStyle = metric.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, legendY);
+      ctx.lineTo(x + 20, legendY);
+      ctx.stroke();
+      
+      // Dot
+      ctx.fillStyle = metric.color;
+      ctx.beginPath();
+      ctx.arc(x + 10, legendY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Label
+      ctx.fillStyle = '#374151';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(metric.label, x + 25, legendY + 4);
+    });
+    
+  }, [data, height]);
+  
+  return (
+    <canvas 
+      ref={canvasRef} 
+      style={{ width: '100%', height: `${height}px` }}
+    />
+  );
+}
+
 interface Case {
   id: string;
   caseStatus: string;
@@ -116,6 +271,9 @@ export default function ReportsOverviewV2Page() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [dateRange, setDateRange] = useState<{ from?: string; to?: string }>({});
+  const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [groupBy, setGroupBy] = useState<'day' | 'week' | 'month'>('day');
 
   const userRole = (session?.user as any)?.role;
   const isManager = userRole === 'MANAGER' || userRole === 'ADMIN';
@@ -131,8 +289,9 @@ export default function ReportsOverviewV2Page() {
   useEffect(() => {
     if (session && isManager) {
       loadOverview();
+      loadTrendData();
     }
-  }, [session, isManager, dateRange]);
+  }, [session, isManager, dateRange, groupBy]);
 
   async function loadOverview() {
     try {
@@ -143,6 +302,31 @@ export default function ReportsOverviewV2Page() {
       console.error('Failed to load overview:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadTrendData() {
+    try {
+      setTrendLoading(true);
+      const data = await reportsApi.getOtifTrend({
+        from: dateRange.from,
+        to: dateRange.to,
+        groupBy,
+      });
+      // Transform data to match our interface
+      const transformedData: TrendDataPoint[] = (data as any[]).map(item => ({
+        period: item.period,
+        totalCases: item.totalCases,
+        otifRate: Math.round(item.otifRate || 0),
+        onTimeRate: Math.round(item.onTimeRate || 0),
+        inFullRate: Math.round(item.inFullRate || 0),
+      }));
+      setTrendData(transformedData);
+    } catch (error) {
+      console.error('Failed to load trend data:', error);
+      setTrendData([]);
+    } finally {
+      setTrendLoading(false);
     }
   }
 
@@ -292,6 +476,45 @@ export default function ReportsOverviewV2Page() {
             subLabel="From approved to completed"
             color="#06b6d4"
           />
+        </div>
+
+        {/* OTIF Trend Chart */}
+        <h2 style={{ marginBottom: '16px' }}>📉 OTIF Trend</h2>
+        <div className="card" style={{ marginBottom: '24px', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {(['day', 'week', 'month'] as const).map((g) => (
+                <button
+                  key={g}
+                  className={`btn ${groupBy === g ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setGroupBy(g)}
+                  style={{ padding: '4px 12px', fontSize: '13px' }}
+                >
+                  {g === 'day' ? 'Ден' : g === 'week' ? 'Недела' : 'Месец'}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {trendLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>Loading...</div>
+          ) : trendData.length > 0 ? (
+            <SimpleLineChart data={trendData} height={220} />
+          ) : (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              color: '#6b7280',
+              background: '#f9fafb',
+              borderRadius: '8px'
+            }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}>📊</div>
+              <div>Нема доволно податоци за trend анализа</div>
+              <div style={{ fontSize: '12px', marginTop: '4px', color: '#9ca3af' }}>
+                Податоци ќе се појават откако ќе се завршат повеќе cases
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Case Status Breakdown */}
