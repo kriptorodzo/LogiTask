@@ -144,6 +144,7 @@ model EmailCase {
   id                    String    @id @default(uuid())
   emailId               String    @unique
   email                 Email     @relation(fields: [emailId], references: [id])
+  caseStatus            String    @default("NEW") // NEW, PROPOSED, APPROVED, IN_PROGRESS, DONE, PARTIAL, FAILED, CANCELLED
   classification        String?   // INBOUND_RECEIPT, OUTBOUND_DELIVERY, DISTRIBUTION, OTHER
   priority              String?   // HIGH, MEDIUM, LOW
   supplierName         String?
@@ -164,6 +165,7 @@ model EmailCase {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
+  @@index([caseStatus])
   @@index([caseDueAt])
   @@index([approvedAt])
   @@index([completedAt])

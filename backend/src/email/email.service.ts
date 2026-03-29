@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailParserService } from './email-parser.service';
+import { CaseAggregationService } from '../reports/case-aggregation.service';
 import { Client } from '@microsoft/microsoft-graph-client';
 
 interface MicrosoftGraphEmail {
@@ -22,6 +23,7 @@ export class EmailService {
     private prisma: PrismaService,
     private config: ConfigService,
     private emailParser: EmailParserService,
+    private caseAggregationService: CaseAggregationService,
   ) {
     // Initialize Graph client with access token
     this.graphClient = Client.init({
@@ -222,6 +224,9 @@ export class EmailService {
         },
       });
     }
+
+    // Trigger case status recalculation after tasks are created
+    this.caseAggregationService.recalculateCaseStatus(email.id).catch(console.error);
   }
 
   // Webhook endpoint for new email notifications

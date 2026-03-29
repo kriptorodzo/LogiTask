@@ -339,6 +339,57 @@ export default function EmailDetailPage() {
               </span>
             )}
           </div>
+
+          {/* Case Status */}
+          {(email as any).case && (
+            <div className="form-group" style={{ marginTop: '16px' }}>
+              <label>Status на Case</label>
+              {(() => {
+                const caseData = (email as any).case;
+                const statusConfig: Record<string, { label: string; className: string; bgColor: string }> = {
+                  NEW: { label: 'Нов', className: 'badge-proposed', bgColor: '#6b7280' },
+                  PROPOSED: { label: 'Предложен', className: 'badge-proposed', bgColor: '#f59e0b' },
+                  APPROVED: { label: 'Одобрен', className: 'badge-approved', bgColor: '#3b82f6' },
+                  IN_PROGRESS: { label: 'Во тек', className: 'badge-in-progress', bgColor: '#8b5cf6' },
+                  DONE: { label: 'Завршен', className: 'badge-done', bgColor: '#10b981' },
+                  PARTIAL: { label: 'Делумно', className: 'badge-in-progress', bgColor: '#f97316' },
+                  FAILED: { label: 'Неуспешен', className: 'badge-rejected', bgColor: '#ef4444' },
+                  CANCELLED: { label: 'Откажан', className: 'badge-rejected', bgColor: '#6b7280' },
+                };
+                const config = statusConfig[caseData.caseStatus] || statusConfig.NEW;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span 
+                      className={`badge ${config.className}`}
+                      style={{ 
+                        fontSize: '14px', 
+                        padding: '6px 12px',
+                        background: config.bgColor,
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {config.label}
+                    </span>
+                    {caseData.isOtif !== null && caseData.isOtif !== undefined && (
+                      <span style={{ 
+                        background: caseData.isOtif ? '#10b981' : '#ef4444', 
+                        color: 'white', 
+                        padding: '4px 8px', 
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        OTIF: {caseData.isOtif ? '✅' : '❌'}
+                      </span>
+                    )}
+                    <span style={{ fontSize: '13px', color: '#666' }}>
+                      Задачи: {caseData.completedTasks || 0}/{caseData.totalTasks || 0}
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
 
         {/* Extracted Information with Warnings */}

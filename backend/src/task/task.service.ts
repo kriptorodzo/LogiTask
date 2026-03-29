@@ -44,7 +44,7 @@ export class TaskService {
     dueDate?: string | Date;
     assigneeId?: string;
   }) {
-    return this.prisma.task.create({
+    const task = await this.prisma.task.create({
       data: {
         emailId: data.emailId,
         title: data.title,
@@ -56,6 +56,11 @@ export class TaskService {
       },
       include: { email: true, assignee: true },
     });
+
+    // Trigger case status recalculation when task is created
+    this.triggerCaseStatusRecalculation(task.emailId).catch(console.error);
+
+    return task;
   }
 
   async getTasks(filters?: {
@@ -282,10 +287,23 @@ export class TaskService {
         where: { emailId },
       });
       if (emailCase) {
+        // Recalculate both status and KPI fields
+        await this.caseAggregationService.recalculateCaseStatus(emailId);
         await this.caseAggregationService.recalculateCase(emailCase.id);
       }
     } catch (error) {
       console.error('Failed to trigger case recalculation:', error);
+    }
+  }
+
+  /**
+   * Trigger case status recalculation (lighter weight)
+   */
+  private async triggerCaseStatusRecalculation(emailId: string): Promise<void> {
+    try {
+      await this.caseAggregationService.recalculateCaseStatus(emailId);
+    } catch (error) {
+      console.error('Failed to trigger case status recalculation:', error);
     }
   }
 

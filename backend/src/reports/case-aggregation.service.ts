@@ -1,6 +1,34 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Case Status enum
+export enum CaseStatus {
+  NEW = 'NEW',
+  PROPOSED = 'PROPOSED',
+  APPROVED = 'APPROVED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  DONE = 'DONE',
+  PARTIAL = 'PARTIAL',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED',
+}
+
+// Task Status enum
+export enum TaskStatus {
+  PROPOSED = 'PROPOSED',
+  APPROVED = 'APPROVED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  DONE = 'DONE',
+  CANCELLED = 'CANCELLED',
+}
+
+// Completion Result enum
+export enum CompletionResult {
+  FULL = 'FULL',
+  PARTIAL = 'PARTIAL',
+  FAILED = 'FAILED',
+}
+
 @Injectable()
 export class CaseAggregationService {
   constructor(private prisma: PrismaService) {}
@@ -58,6 +86,138 @@ export class CaseAggregationService {
   }
 
   /**
+   * Recalculate case status based on all related tasks
+   * Status logic:
+   * - NEW: no tasks exist
+   * - PROPOSED: tasks exist but none are approved
+   * - APPROVED: all non-cancelled tasks are approved
+   * - IN_PROGRESS: at least one task is in progress
+   * - DONE: all required tasks done with FULL
+   * - PARTIAL: all required tasks terminal, at least one PARTIAL
+   * - FAILED: at least one required task failed
+   * - CANCELLED: all required tasks cancelled
+   */
+  async recalculateCaseStatus(emailId: string): Promise<string> {
+    const tasks = await this.prisma.task.findMany({
+      where: { emailId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Case is NEW if no tasks exist
+    if (tasks.length === 0) {
+      await this.updateCaseField(emailId, 'caseStatus', CaseStatus.NEW);
+      return CaseStatus.NEW;
+    }
+
+    // Filter required tasks (not marked as not required for case)
+    const requiredTasks = tasks.filter(t => t.isRequiredForCase !== false);
+    const optionalTasks = tasks.filter(t => t.isRequiredForCase === false);
+
+    // Check for CANCELLED state - all required tasks cancelled
+    if (requiredTasks.length > 0) {
+      const allCancelled = requiredTasks.every(t => t.status === TaskStatus.CANCELLED);
+      if (allCancelled) {
+        await this.updateCaseField(emailId, 'caseStatus', CaseStatus.CANCELLED);
+        return CaseStatus.CANCELLED;
+      }
+    }
+
+    // Count tasks by status
+    const proposedCount = tasks.filter(t => t.status === TaskStatus.PROPOSED).length;
+    const approvedCount = tasks.filter(t => t.status === TaskStatus.APPROVED).length;
+    const inProgressCount = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
+    const doneCount = tasks.filter(t => t.status === TaskStatus.DONE).length;
+    const cancelledCount = tasks.filter(t => t.status === TaskStatus.CANCELLED).length;
+    const nonCancelledCount = tasks.length - cancelledCount;
+
+    // Count by completion result
+    const fullCount = tasks.filter(t => t.completionResult === CompletionResult.FULL).length;
+    const partialCount = tasks.filter(t => t.completionResult === CompletionResult.PARTIAL).length;
+    const failedCount = tasks.filter(t => t.completionResult === CompletionResult.FAILED).length;
+
+    // Determine case status
+    let newStatus: CaseStatus;
+
+    // FAILED: any required task with FAILED completion
+    if (requiredTasks.some(t => t.completionResult === CompletionResult.FAILED)) {
+      newStatus = CaseStatus.FAILED;
+    }
+    // DONE: all required tasks are DONE with FULL completion
+    else if (requiredTasks.length > 0 && requiredTasks.every(t => 
+      t.status === TaskStatus.DONE && t.completionResult === CompletionResult.FULL
+    )) {
+      newStatus = CaseStatus.DONE;
+    }
+    // PARTIAL: all required tasks are terminal (DONE or CANCELLED), at least one PARTIAL, none FAILED
+    else if (requiredTasks.length > 0 && requiredTasks.every(t => 
+      [TaskStatus.DONE, TaskStatus.CANCELLED].includes(t.status as TaskStatus)
+    ) && requiredTasks.some(t => t.completionResult === CompletionResult.PARTIAL)) {
+      newStatus = CaseStatus.PARTIAL;
+    }
+    // IN_PROGRESS: at least one task is IN_PROGRESS or has startedAt
+    else if (inProgressCount > 0 || tasks.some(t => t.startedAt)) {
+      newStatus = CaseStatus.IN_PROGRESS;
+    }
+    // APPROVED: all non-cancelled tasks are APPROVED
+    else if (approvedCount === nonCancelledCount && approvedCount > 0) {
+      newStatus = CaseStatus.APPROVED;
+    }
+    // PROPOSED: at least one is PROPOSED, none in progress or approved
+    else if (proposedCount > 0 && approvedCount === 0 && inProgressCount === 0) {
+      newStatus = CaseStatus.PROPOSED;
+    }
+    // Default to PROPOSED if tasks exist but none of above conditions match
+    else {
+      newStatus = CaseStatus.PROPOSED;
+    }
+
+    await this.updateCaseField(emailId, 'caseStatus', newStatus);
+    return newStatus;
+  }
+
+  private async updateCaseField(emailId: string, field: string, value: any): Promise<void> {
+    const updateData: any = { [field]: value };
+
+    // Set timestamps based on status
+    if (field === 'caseStatus') {
+      if (value === CaseStatus.APPROVED) {
+        updateData.approvedAt = new Date();
+      } else if ([CaseStatus.DONE, CaseStatus.PARTIAL, CaseStatus.FAILED, CaseStatus.CANCELLED].includes(value)) {
+        updateData.completedAt = new Date();
+      }
+    }
+
+    try {
+      await this.prisma.emailCase.update({
+        where: { emailId },
+        data: updateData,
+      });
+    } catch (error) {
+      // Case might not exist yet - ignore
+      console.warn('Could not update case field:', error);
+    }
+  }
+
+  /**
+   * Full case refresh - recalculate status and all KPI fields
+   */
+  async refreshCase(emailId: string): Promise<any> {
+    const caseData = await this.prisma.emailCase.findUnique({
+      where: { emailId },
+    });
+
+    if (!caseData) {
+      throw new Error('Case not found');
+    }
+
+    // First recalculate status
+    await this.recalculateCaseStatus(emailId);
+
+    // Then recalculate other KPIs
+    return this.recalculateCase(caseData.id);
+  }
+
+  /**
    * Recalculate all KPI fields for a case based on its tasks
    * OTIF Logic:
    * - On-Time = completedAt <= caseDueAt
@@ -71,7 +231,6 @@ export class CaseAggregationService {
         email: {
           include: {
             tasks: {
-              where: { isRequiredForCase: true },
               include: { assignee: true, statusHistory: true },
             },
           },
@@ -83,21 +242,23 @@ export class CaseAggregationService {
       throw new Error('Case not found');
     }
 
-    const tasks = emailCase.email.tasks;
-    const totalTasks = tasks.length;
+    const allTasks = emailCase.email.tasks;
+    const tasks = allTasks.filter(t => t.isRequiredForCase !== false);
+    const requiredTasks = tasks; // All non-excluded tasks are required
+    const totalTasks = allTasks.length;
     
-    // Count tasks by completion result
-    const completedTasks = tasks.filter(t => t.completionResult === 'FULL').length;
-    const partialTasks = tasks.filter(t => t.completionResult === 'PARTIAL').length;
-    const failedTasks = tasks.filter(t => t.completionResult === 'FAILED').length;
+    // Count tasks by completion result (use allTasks for complete picture)
+    const completedTasks = allTasks.filter(t => t.completionResult === 'FULL').length;
+    const partialTasks = allTasks.filter(t => t.completionResult === 'PARTIAL').length;
+    const failedTasks = allTasks.filter(t => t.completionResult === 'FAILED').length;
 
     // Determine if case is completed
-    const hasCompletedTasks = tasks.some(t => t.completedAt !== null);
+    const hasCompletedTasks = allTasks.some(t => t.completedAt !== null);
     
     // Calculate isOnTime: completedAt <= caseDueAt
     let isOnTime: boolean | null = null;
     if (hasCompletedTasks && emailCase.caseDueAt) {
-      const lastCompletionDate = tasks.reduce((max, t) => {
+      const lastCompletionDate = allTasks.reduce((max, t) => {
         if (t.completedAt && t.completedAt > max) return t.completedAt;
         return max;
       }, new Date(0));
@@ -121,7 +282,7 @@ export class CaseAggregationService {
     let executionLeadMinutes: number | null = null;
 
     // Find first approval (first task going to APPROVED status)
-    const approvalHistory = tasks.flatMap(t => t.statusHistory)
+    const approvalHistory = allTasks.flatMap(t => t.statusHistory)
       .filter(h => h.toStatus === 'APPROVED')
       .sort((a, b) => a.changedAt.getTime() - b.changedAt.getTime());
 
@@ -135,7 +296,7 @@ export class CaseAggregationService {
     // Calculate execution lead time (first approval to last completion)
     if (approvalHistory.length > 0) {
       const firstApprovalDate = approvalHistory[0].changedAt;
-      const lastCompletionDate = tasks.reduce((max, t) => {
+      const lastCompletionDate = allTasks.reduce((max, t) => {
         if (t.completedAt && t.completedAt > max) return t.completedAt;
         return max;
       }, new Date(0));
@@ -147,10 +308,13 @@ export class CaseAggregationService {
       }
     }
 
-    // Update the case
+    // Update the case - first calculate status
+    const status = await this.determineCaseStatus(tasks, requiredTasks);
+    
     return this.prisma.emailCase.update({
       where: { id: caseId },
       data: {
+        caseStatus: status,
         completedAt: hasCompletedTasks ? new Date() : null,
         approvedAt: approvalHistory.length > 0 ? approvalHistory[0].changedAt : null,
         isOnTime,
@@ -164,6 +328,50 @@ export class CaseAggregationService {
         failedTasks,
       },
     });
+  }
+
+  /**
+   * Determine case status based on task states
+   */
+  private async determineCaseStatus(tasks: any[], requiredTasks: any[]): Promise<CaseStatus> {
+    if (tasks.length === 0) {
+      return CaseStatus.NEW;
+    }
+
+    const allCancelled = requiredTasks.length > 0 && requiredTasks.every(t => t.status === TaskStatus.CANCELLED);
+    if (allCancelled) {
+      return CaseStatus.CANCELLED;
+    }
+
+    const proposedCount = tasks.filter(t => t.status === TaskStatus.PROPOSED).length;
+    const approvedCount = tasks.filter(t => t.status === TaskStatus.APPROVED).length;
+    const inProgressCount = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
+    const cancelledCount = tasks.filter(t => t.status === TaskStatus.CANCELLED).length;
+    const nonCancelledCount = tasks.length - cancelledCount;
+
+    if (requiredTasks.some(t => t.completionResult === CompletionResult.FAILED)) {
+      return CaseStatus.FAILED;
+    }
+    if (requiredTasks.length > 0 && requiredTasks.every(t => 
+      t.status === TaskStatus.DONE && t.completionResult === CompletionResult.FULL
+    )) {
+      return CaseStatus.DONE;
+    }
+    if (requiredTasks.length > 0 && requiredTasks.every(t => 
+      [TaskStatus.DONE, TaskStatus.CANCELLED].includes(t.status as TaskStatus)
+    ) && requiredTasks.some(t => t.completionResult === CompletionResult.PARTIAL)) {
+      return CaseStatus.PARTIAL;
+    }
+    if (inProgressCount > 0 || tasks.some(t => t.startedAt)) {
+      return CaseStatus.IN_PROGRESS;
+    }
+    if (approvedCount === nonCancelledCount && approvedCount > 0) {
+      return CaseStatus.APPROVED;
+    }
+    if (proposedCount > 0 && approvedCount === 0 && inProgressCount === 0) {
+      return CaseStatus.PROPOSED;
+    }
+    return CaseStatus.NEW;
   }
 
   /**
