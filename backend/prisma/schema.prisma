@@ -86,7 +86,7 @@ model Task {
 
   // ERP Integration
   erpDocumentId   String?
-  erpDocument     ErpDocument? @relation(fields: [erpDocumentId], references: [id])
+  erpDocument     ErpDocument? @relation("ErpDocumentTasks", fields: [erpDocumentId], references: [id])
 
   dependencies    TaskDependency[]   @relation("DependentTask")
   dependents      TaskDependency[]   @relation("DependencyTask")
@@ -277,8 +277,11 @@ model ErpDocument {
   totalQuantity   Int       @default(0)
   plannedDate     DateTime?
   
-  // Link to task if created from this document
-  taskId          String?   @unique // FK to Task (no relation needed on this side)
+  // Tasks created from this document
+  tasks           Task[]    @relation("ErpDocumentTasks")
+
+  // Legacy - single task link
+  taskId          String?   @unique // FK to Task
   
   // Raw data
   rawPayloadJson  String?   // Original row data as JSON
