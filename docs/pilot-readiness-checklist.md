@@ -1,95 +1,104 @@
-# Pilot Readiness Checklist
+# Pilot Readiness Checklist — LogiTask
 
-Use this checklist to verify all systems are ready before pilot start date.
+## 1. Application Availability
+- ✅ Backend build е чист
+- ✅ Frontend compile е чист
+- ✅ Backend локално стартува
+- ✅ Frontend локално стартува
+- ✅ API е достапен за локално тестирање
+- ⚠️ Production backend environment е финално конфигуриран
+- ⚠️ Production frontend environment е финално конфигуриран
 
----
+## 2. Core Workflow Validation
+- ✅ Manager dashboard работи
+- ✅ Manager inbox прикажува email cards со summary и suggested delegation
+- ✅ Approve & Delegate workflow работи
+- ✅ Proposed tasks се префрлаат во approved/delegated flow
+- ✅ Coordinator board работи
+- ✅ Delivery coordinator гледа само свои задачи
+- ✅ Distribution coordinator гледа само свои задачи
+- ✅ Reception coordinator гледа само свои задачи
+- ✅ Task lifecycle `APPROVED → IN_PROGRESS → DONE` работи
+- ✅ Status changes се перзистираат во база
+- ✅ Manager view се освежува по approval/completion
+- ✅ Reports се освежуваат по completion
 
-## Pre-Flight Checks (Day Before Pilot)
+## 3. Demo / Smoke Test Readiness
+- ✅ Базата е reset и reseed-ирана со fresh demo data
+- ✅ Постојат 10 demo emails
+- ✅ Постојат proposed / approved / done сценарија
+- ✅ End-to-end smoke test е поминат
+- ✅ Distribution scenario е поминат
+- ✅ Role isolation е потврдена
+- ✅ Demo workflow е валидиран од manager до reports
 
-### Infrastructure
-- [ ] PostgreSQL database accessible
-- [ ] Backend API responding on port 4000
-- [ ] Frontend accessible on port 3000
-- [ ] No critical errors in logs
+## 4. Reporting / KPI / OTIF
+- ✅ Reports page е достапна
+- ✅ OTIF KPI е достапен
+- ✅ On-Time KPI е достапен
+- ✅ In-Full KPI е достапен
+- ✅ KPI се освежуваат по завршување на задачи
+- ✅ Cases / coordinators / scorecard views постојат
+- ⚠️ KPI / OTIF dashboard UX polish останува како improvement
+- ⚠️ Drilldown / visualization enhancements остануваат како next-phase improvement
 
-### Authentication
-- [ ] Azure AD app registered
-- [ ] Redirect URIs configured
-- [ ] At least 1 test user can login
-- [ ] User roles correctly assigned
+## 5. Security / Authentication
+- ✅ Authentication workflow локално функционира за тестирање
+- ⚠️ Dev auth bypass е целосно отстранет или изолиран од pilot/prod
+- ⚠️ Dev fallback user IDs се целосно отстранети
+- ⚠️ `test_role` / localStorage role override е целосно отстранет
+- ⚠️ Audit log користи real authenticated user identity
+- ⚠️ Role enforcement е потврдена преку реален auth flow
+- ⚠️ Azure AD / Entra ID pilot configuration е финално потврдена
 
-### Email Integration
-- [ ] Microsoft Graph API permissions granted
-- [ ] Mailbox access token valid
-- [ ] Test email can be fetched
+## 6. Production / Pilot Infrastructure
+- ✅ Prisma schema provider changed from SQLite to PostgreSQL
+- ✅ PostgreSQL production/pilot database конфигурирана и reachable (verified 29 март 2026)
+- ✅ Database connectivity потврдена (smoke test passed)
+- ⚠️ Azure AD app registration конфигурирана (види `azure-ad-pilot-config-operational.md`)
+- ⚠️ Redirect URIs потврдени
+- ⚠️ Microsoft Graph API permissions доделени
+- ⚠️ Real mailbox integration потврдена
+- ⚠️ Test email fetch од реален mailbox потврден
+- ✅ Backup procedure е документирана
+- ✅ Incident response SOP е документиран
+- ✅ Retry logic постои
+- ⚠️ Secrets / environment values за pilot финално внесени
 
-### Database
-- [ ] Seed data loaded (pilot users)
-- [ ] Routing rules active
-- [ ] Test case can be created
-
----
-
-## Day 0: Pilot Start
-
-### Users & Access
-- [ ] Manager user (manager@company.com) can access reports
-- [ ] Coordinator users can login
-- [ ] Role permissions verified
-
-### Reports Access
-- [ ] Manager can view all reports
-- [ ] Overview page loads
-- [ ] Cases list loads
-- [ ] OTIF trend chart displays
-- [ ] Coordinators page loads
-- [ ] CSV export works
-
-### Coordinator Tasks
-- [ ] Reception coordinator sees assigned tasks
-- [ ] Delivery coordinator sees assigned tasks
-- [ ] Distribution coordinator sees assigned tasks
-- [ ] Can update task status
-- [ ] Can set completion result
-- [ ] Can add comments
-
----
-
-## Verification Tests
-
-### Email Processing Test
-1. Send test email to logistics@company.com
-2. Verify email appears in system
-3. Verify task is created
-4. Verify assignment to correct coordinator
-
-### OTIF Calculation Test
-1. Complete a case with all timestamps
-2. Verify OTIF = 100%
-3. Verify "on time" indicator shows green
-4. Verify "in full" indicator shows green
-
-### Recalculation Test
-1. Manually modify case timestamps
-2. Trigger recalculate endpoint
-3. Verify OTIF recalculates correctly
-
----
-
-## Emergency Contacts
-
-| Role | Name | Phone | Verified |
-|------|------|-------|----------|
-| Tech Lead | _________ | _________ | [ ] |
-| On-Call | _________ | _________ | [ ] |
-| Product | _________ | _________ | [ ] |
+## 7. Operational / Go-Live Readiness
+- ✅ `go-live-status-report.md` постои
+- ✅ `pilot-readiness-checklist.md` е ажуриран
+- ✅ `smoke-test-checklist.md` постои
+- ✅ `pilot-scenarios.md` постои
+- ✅ `backup-procedure.md` постои
+- ✅ `incident-response.md` постои
+- ⚠️ Product Owner sign-off е добиен
+- ⚠️ Pilot owner е формално назначен
+- ⚠️ Planned pilot start date е финално потврдена
+- ⚠️ Go / No-Go review е формално затворен
 
 ---
 
-## Sign-Off
+## Blocking Items Before Pilot Start
+- ⚠️ Production/pilot auth мора да биде чист без dev-only bypass
+- ⚠️ Dev fallback IDs мора да бидат отстранети
+- ⚠️ `test_role` override мора да биде отстранет
+- ⚠️ PostgreSQL pilot database мора да биде достапна
+- ⚠️ Azure AD / Graph API pilot config мора да биде верификувана
+- ⚠️ Real mailbox fetch мора да биде потврден
 
-| Role | Name | Date | Signature |
-|------|------|------|-----------|
-| Tech Lead | | | |
-| Product Owner | | | |
-| Engineering Manager | | | |
+---
+
+## Final Readiness Decision
+**Decision:** CONDITIONAL GO
+
+## Go Conditions
+1. ⚠️ Production/pilot auth configured without dev-only bypass
+2. ⚠️ Dev fallback user IDs removed
+3. ⚠️ `test_role` / localStorage overrides removed
+4. ⚠️ PostgreSQL production/pilot database configured and reachable
+5. ⚠️ Azure AD app registration and redirect URIs verified
+6. ⚠️ Microsoft Graph permissions verified and real test email fetch confirmed
+
+## Recommendation
+Продолжи со pilot **само по затворање на сите ⚠️ точки што се означени како blocking items**.

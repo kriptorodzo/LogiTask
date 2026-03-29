@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Patch } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { EmailService } from './email.service';
 import { getAuthGuard } from '../common/utils/auth.utils';
@@ -40,6 +40,20 @@ export class EmailController {
   @ApiOperation({ summary: 'Get email by ID' })
   async getEmail(@Param('id') id: string) {
     return this.emailService.getEmailById(id);
+  }
+
+  @Patch(':id/status')
+  @UseGuards(getAuthGuard())
+  @ApiOperation({ summary: 'Update email status' })
+  async updateStatus(@Param('id') id: string, @Body('status') status: string) {
+    return this.emailService.updateStatus(id, status);
+  }
+
+  @Patch(':id/classify')
+  @UseGuards(getAuthGuard())
+  @ApiOperation({ summary: 'Classify email and generate tasks' })
+  async classify(@Param('id') id: string, @Body('requestType') requestType: string) {
+    return this.emailService.classifyEmail(id, requestType);
   }
 
   @Post('webhook')

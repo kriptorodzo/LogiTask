@@ -69,7 +69,7 @@ export default function ManagerInboxPage() {
         );
       case 'delegated':
         return emails.filter(e => 
-          getTasksForEmail(e.id).some(t => t.status === 'APPROVED' || t.status === 'ASSIGNED')
+          getTasksForEmail(e.id).some(t => t.status === 'IN_PROGRESS' || t.status === 'DONE')
         );
       case 'problematic':
         return emails.filter(e => e.requestType === 'UNCLASSIFIED');
@@ -184,7 +184,7 @@ export default function ManagerInboxPage() {
   const tabCounts = {
     new: emails.filter(e => e.processingStatus === 'PENDING').length,
     pending: emails.filter(e => e.processingStatus === 'PROCESSED' && getTasksForEmail(e.id).some(t => t.status === 'PROPOSED')).length,
-    delegated: emails.filter(e => getTasksForEmail(e.id).some(t => t.status === 'APPROVED' || t.status === 'ASSIGNED')).length,
+    delegated: emails.filter(e => getTasksForEmail(e.id).some(t => t.status === 'IN_PROGRESS' || t.status === 'DONE')).length,
     problematic: emails.filter(e => e.requestType === 'UNCLASSIFIED').length,
     overdue: emails.filter(e => {
       const emailCase = (e as any).case;
@@ -261,7 +261,7 @@ export default function ManagerInboxPage() {
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <span className={`badge ${email.requestType === 'UNCLASSIFIED' ? 'badge-rejected' : 'badge-approved'}`}>
-                        {getTypeLabel(email.requestType)}
+                        {getTypeLabel(email.requestType || 'UNCLASSIFIED')}
                       </span>
                       {email.extractedUrgency === 'HIGH' && (
                         <span className="badge badge-proposed">URGENT</span>

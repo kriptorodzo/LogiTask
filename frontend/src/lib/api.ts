@@ -29,6 +29,14 @@ export const emailApi = {
     const { data } = await apiClient.get(`/emails/${id}`);
     return data;
   },
+  updateStatus: async (id: string, status: string) => {
+    const { data } = await apiClient.patch(`/emails/${id}/status`, { status });
+    return data;
+  },
+  classify: async (id: string, requestType: string) => {
+    const { data } = await apiClient.patch(`/emails/${id}/classify`, { requestType });
+    return data;
+  },
   createMailbox: async (emailAddress: string, displayName?: string) => {
     const { data } = await apiClient.post('/emails/mailboxes', { emailAddress, displayName });
     return data;
@@ -70,7 +78,10 @@ export const taskApi = {
     return data;
   },
   approve: async (id: string, assigneeId: string) => {
-    const { data } = await apiClient.post(`/tasks/${id}/approve`, { assigneeId });
+    const { data } = await apiClient.post(`/tasks/${id}/approve`, { assigneeId }).catch(err => {
+      console.error('Approve failed:', err.response?.data || err.message);
+      throw err;
+    });
     return data;
   },
   reject: async (id: string, reason: string) => {

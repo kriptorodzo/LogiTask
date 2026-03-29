@@ -1,32 +1,25 @@
 import { Controller, Get, Post, Body, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { getAuthGuard, DevAuthGuard } from '../common/utils/auth.utils';
+import { HybridAuthGuard } from '../common/utils/auth.utils';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Get('login')
-  @UseGuards(getAuthGuard())
+  @UseGuards(HybridAuthGuard)
   login() {
-    // This triggers Azure AD login flow or returns dev mode message
-  }
-
-  @Post('dev-login')
-  @UseGuards(DevAuthGuard)
-  async devLogin(@Body() body: { email: string; role: string }) {
-    const user = await this.authService.validateDevUser(body.email, body.role);
-    return user;
+    // This triggers Azure AD login flow
   }
 
   @Get('callback')
-  @UseGuards(getAuthGuard())
+  @UseGuards(HybridAuthGuard)
   async callback(@Req() req: any) {
     return req.user;
   }
 
   @Get('me')
-  @UseGuards(getAuthGuard())
+  @UseGuards(HybridAuthGuard)
   async me(@Req() req: any) {
     return req.user;
   }

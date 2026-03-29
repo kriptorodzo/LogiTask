@@ -17,18 +17,23 @@ export class TaskService {
     taskId: string,
     fromStatus: string | null,
     toStatus: string,
-    changedByUserId: string,
+    changedByUserId?: string,
     note?: string
   ) {
-    return this.prisma.taskStatusHistory.create({
-      data: {
-        taskId,
-        fromStatus,
-        toStatus,
-        changedByUserId,
-        note,
-      },
-    });
+    try {
+      return await this.prisma.taskStatusHistory.create({
+        data: {
+          taskId,
+          fromStatus,
+          toStatus,
+          changedByUserId,
+          note,
+        },
+      });
+    } catch (error) {
+      console.warn('Failed to create status history:', error);
+      return null;
+    }
   }
 
   async createTask(data: {
@@ -111,14 +116,21 @@ export class TaskService {
       include: { email: true },
     });
 
-    await this.prisma.auditLog.create({
-      data: {
-        userId,
-        taskId: id,
-        action: 'APPROVE',
-        details: JSON.stringify({ message: `Task approved and assigned to ${assigneeId}` }),
-      },
-    });
+    // Create audit log only if userId is provided
+    if (userId) {
+      try {
+        await this.prisma.auditLog.create({
+          data: {
+            userId,
+            taskId: id,
+            action: 'APPROVE',
+            details: JSON.stringify({ message: `Task approved and assigned to ${assigneeId}` }),
+          },
+        });
+      } catch (error) {
+        console.warn('Failed to create audit log:', error);
+      }
+    }
 
     await this.recordStatusChange(id, currentTask?.status || null, TASK_STATUS.APPROVED, userId, `Assigned to ${assigneeId}`);
 

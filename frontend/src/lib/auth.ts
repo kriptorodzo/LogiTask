@@ -5,51 +5,54 @@ import axios from 'axios';
 
 const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
 
-// Auto-detect dev mode: use Credentials if Azure AD is not configured
-const isAzureConfigured = !!process.env.AZURE_AD_CLIENT_ID && !!process.env.AZURE_AD_CLIENT_SECRET && !!process.env.AZURE_AD_TENANT_ID;
+// Production/Pilot: MUST use Azure AD auth - no dev fallback allowed
+// Only activates when BOTH NODE_ENV=production AND (no AUTH_MODE or AUTH_MODE=production)
+const isProductionMode = process.env.NODE_ENV === 'production' && 
+  (!process.env.AUTH_MODE || process.env.AUTH_MODE === 'production');
 
-const providers = !isAzureConfigured
-  ? [
-      CredentialsProvider({
-        name: 'Dev Login',
-        credentials: {
-          email: { label: 'Email', type: 'email', placeholder: 'manager@company.com' },
-          role: { label: 'Role', type: 'text', placeholder: 'MANAGER' },
-        },
-        async authorize(credentials) {
-          // Dev mode: call backend to create/validate user
-          try {
-            const response = await fetch(`${backendUrl}/auth/dev-login`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: credentials?.email, role: credentials?.role }),
-            });
-            if (response.ok) {
-              const user = await response.json();
-              return { ...user, name: user.displayName };
-            }
-          } catch (e) {
-            console.error('Dev login error:', e);
-          }
-          // Fallback to mock user
-          const email = credentials?.email || '';
-          const role = credentials?.role || 'MANAGER';
-          return { email, name: email.split('@')[0], role, id: email };
-        },
-      }),
-    ]
-  : [
-      AzureADProvider({
-        clientId: process.env.AZURE_AD_CLIENT_ID || '',
-        clientSecret: process.env.AZURE_AD_CLIENT_SECRET || '',
-        tenantId: process.env.AZURE_AD_TENANT_ID || '',
-        authorization: {
-          params: {
-            scope: 'openid profile email User.Read Mail.Read',
-          },
-        },
-      }),
-    ];
+// In PRODUCTION mode: Azure AD MUST be configured with real values
+// In DEVELOPMENT mode: placeholder credentials are OK (dev bypass used)
+if (isProductionMode) {
+  const clientId = process.env.AZURE_AD_CLIENT_ID;
+  if (!clientId || clientId === 'placeholder' || clientId === 'REPLACE_WITH_ACTUAL_CLIENT_ID') {
+    throw new Error('CRITICAL: Azure AD configuration missing in production. Set AZURE_AD_CLIENT_ID, AZURE_AD_CLIENT_SECRET, AZURE_AD_TENANT_ID with real values');
+  }
+  if (!process.env.AZURE_AD_CLIENT_SECRET || !process.env.AZURE_AD_TENANT_ID) {
+    throw new Error('CRITICAL: Azure AD configuration incomplete. Set all three credentials');
+  }
+}
+
+// Dev bypass provider for local UI testing
+const devProvider = CredentialsProvider({
+  name: 'Dev Credentials',
+  credentials: {
+    email: { label: "Email", type: "text" },
+    role: { label: "Role", type: "text" }
+  },
+  async authorize(credentials) {
+    return {
+      id: 'dev-user-id',
+      email: credentials?.email || 'dev@company.com',
+      name: credentials?.email?.split('@')[0] || 'Dev User',
+      role: credentials?.role || 'MANAGER',
+    };
+  }
+});
+
+// Azure AD provider - will use real or placeholder depending on mode
+const azureProvider = AzureADProvider({
+  clientId: process.env.AZURE_AD_CLIENT_ID || 'placeholder',
+  clientSecret: process.env.AZURE_AD_CLIENT_SECRET || 'placeholder',
+  tenantId: process.env.AZURE_AD_TENANT_ID || 'placeholder',
+  authorization: {
+    params: {
+      scope: 'openid profile email User.Read Mail.Read',
+    },
+  },
+});
+
+// Use dev bypass in development, Azure AD in production
+const providers = isProductionMode ? [azureProvider] : [devProvider, azureProvider];
 
 export const authOptions: NextAuthOptions = {
   providers,
@@ -58,13 +61,18 @@ export const authOptions: NextAuthOptions = {
       if (account) {
         // Store access token for API calls
         token.accessToken = account.access_token;
-        token.role = (user as any)?.role || 'RECEPTION_COORDINATOR';
+        token.role = (user as any)?.role || 
+                     (account.provider === 'credentials' ? 'MANAGER' : 'RECEPTION_COORDINATOR');
       }
       return token;
     },
     async session({ session, token }) {
       (session as any).accessToken = token.accessToken;
+      // Put role at both session level AND user level for compatibility
       (session as any).role = token.role;
+      if (session.user) {
+        (session.user as any).role = token.role;
+      }
       return session;
     },
   },

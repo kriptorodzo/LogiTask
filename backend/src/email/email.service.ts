@@ -150,6 +150,80 @@ export class EmailService {
     });
   }
 
+  async updateStatus(id: string, status: string) {
+    return this.prisma.email.update({
+      where: { id },
+      data: { processingStatus: status },
+    });
+  }
+
+  async classifyEmail(id: string, requestType: string) {
+    // First update the email with the classification
+    const email = await this.prisma.email.update({
+      where: { id },
+      data: { 
+        requestType,
+        processingStatus: 'PROCESSED',
+      },
+    });
+
+    // Generate tasks based on the request type
+    await this.generateTasksForEmail(email);
+
+    // Return the updated email with tasks
+    return this.getEmailById(id);
+  }
+
+  private async generateTasksForEmail(email: any) {
+    const tasks: Array<{title: string; requestType: string; dueDate: Date}> = [];
+
+    // Generate tasks based on request type
+    switch (email.requestType) {
+      case 'INBOUND_RECEIPT':
+        tasks.push({
+          title: `Прием на роба од ${email.extractedSupplier || 'добавувач'}`,
+          requestType: 'INBOUND_RECEIPT',
+          dueDate: email.extractedDeliveryDate || new Date(),
+        });
+        break;
+      case 'OUTBOUND_PREPARATION':
+        tasks.push({
+          title: 'Подготовка на роба',
+          requestType: 'OUTBOUND_PREPARATION',
+          dueDate: email.extractedDeliveryDate || new Date(),
+        });
+        break;
+      case 'OUTBOUND_DELIVERY':
+        tasks.push({
+          title: `Испорака до ${email.extractedLocation || 'клиент'}`,
+          requestType: 'OUTBOUND_DELIVERY',
+          dueDate: email.extractedDeliveryDate || new Date(),
+        });
+        break;
+      case 'TRANSFER_DISTRIBUTION':
+        tasks.push({
+          title: `Дистрибуција до ${email.extractedLocation || 'локација'}`,
+          requestType: 'TRANSFER_DISTRIBUTION',
+          dueDate: email.extractedDeliveryDate || new Date(),
+        });
+        break;
+    }
+
+    // Create tasks in database
+    for (const task of tasks) {
+      await this.prisma.task.create({
+        data: {
+          emailId: email.id,
+          title: task.title,
+          requestType: task.requestType,
+          status: 'PROPOSED',
+          dueDate: task.dueDate,
+          isRequiredForCase: true,
+        },
+      });
+    }
+  }
+
   // Webhook endpoint for new email notifications
   async handleWebhook(notification: any) {
     // Microsoft Graph sends webhook notifications
