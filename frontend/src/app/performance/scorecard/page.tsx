@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { performanceApi } from '@/lib/api';
 import { useSession } from 'next-auth/react';
+import TopBar from '@/components/TopBar';
+import { KpiCard } from '@/components';
 
 interface ScorecardData {
   userId: string;
@@ -112,25 +114,44 @@ export default function PerformanceScorecardPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
-          <div className="grid grid-cols-4 gap-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
-            ))}
+      <>
+        <TopBar 
+          title="Performance Scorecard"
+          subtitle="Loading..."
+          breadcrumbs={[
+            { label: 'Performance', href: '/performance/leaderboard' },
+            { label: 'Scorecard' }
+          ]}
+        />
+        <div className="page-content">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div className="grid grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="h-24 bg-gray-200 rounded"></div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <h2 className="text-red-800 text-lg font-semibold mb-2">Грешка</h2>
-          <p className="text-red-600 mb-4">{error}</p>
+      <>
+        <TopBar 
+          title="Performance Scorecard"
+          subtitle="Error"
+          breadcrumbs={[
+            { label: 'Performance', href: '/performance/leaderboard' },
+            { label: 'Scorecard' }
+          ]}
+        />
+        <div className="page-content">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <h2 className="text-red-800 text-lg font-semibold mb-2">Грешка</h2>
+            <p className="text-red-600 mb-4">{error}</p>
           <button
             onClick={loadScorecard}
             className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
@@ -143,61 +164,58 @@ export default function PerformanceScorecardPage() {
   }
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Мoj Перформанс</h1>
-        <div className="flex gap-2 items-center">
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-            className="px-3 py-2 border rounded"
-          >
-            {MONTHS.map((m, i) => (
-              <option key={i} value={i + 1}>{m}</option>
-            ))}
-          </select>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="px-3 py-2 border rounded"
-          >
-            <option value={2026}>2026</option>
-            <option value={2025}>2025</option>
-            <option value={2024}>2024</option>
-          </select>
-        </div>
-      </div>
-
-      {!scorecard ? (
-        <div className="bg-white p-8 rounded-lg shadow text-center">
-          <p className="text-gray-500">Нема податоци за избраениот период.</p>
-          <p className="text-gray-400 mt-2">Комплетирајте задачи за да го видите вашиот перформанс.</p>
-        </div>
-      ) : (
-        <>
-          {/* Main Score Card */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-6 mb-8 text-white">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-bold mb-1">{scorecard.userName}</h2>
-                <p className="text-blue-100">{getRoleLabel(scorecard.roleCode)}</p>
-                <p className="text-blue-100 text-sm">{MONTHS[scorecard.month - 1]} {scorecard.year}</p>
-              </div>
-              <div className="text-right">
-                <div className="text-5xl font-bold mb-2">{scorecard.totalScore}</div>
-                <div className="text-blue-100">Вкупен скор</div>
-                <div className="mt-2">{getBonusBadge(scorecard.bonusEligible, scorecard.totalScore)}</div>
-              </div>
+    <>
+      <TopBar 
+        title="Performance Scorecard"
+        subtitle={`${MONTHS[selectedMonth - 1]} ${selectedYear}`}
+        breadcrumbs={[
+          { label: 'Performance', href: '/performance/leaderboard' },
+          { label: 'Scorecard' }
+        ]}
+      />
+      <div className="page-content">
+        {/* Main Score Card */}
+        <div className="scorecard-hero">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold mb-1">{scorecard?.userName}</h2>
+              <p className="text-blue-100">{scorecard && getRoleLabel(scorecard.roleCode)}</p>
+              <p className="text-blue-100 text-sm">{scorecard && `${MONTHS[scorecard.month - 1]} ${scorecard.year}`}</p>
+            </div>
+            <div className="text-right">
+              <div className="text-5xl font-bold mb-2">{scorecard?.totalScore}</div>
+              <div className="text-blue-100">Вкупен скор</div>
+              <div className="mt-2">{scorecard && getBonusBadge(scorecard.bonusEligible, scorecard.totalScore)}</div>
             </div>
           </div>
+        </div>
 
-          {/* KPI Cards */}
-          <div className="grid grid-cols-4 gap-4 mb-8">
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-              <div className="text-sm text-gray-500">Доделени задачи</div>
-              <div className="text-2xl font-bold">{scorecard.assignedTasks}</div>
-            </div>
+        {/* KPI Cards */}
+        <div className="kpi-grid">
+          <KpiCard 
+            label="Assigned Tasks" 
+            value={scorecard?.assignedTasks || 0} 
+            color="blue"
+          />
+          <KpiCard 
+            label="Completed" 
+            value={scorecard?.completedTasks || 0} 
+            color="green"
+          />
+          <KpiCard 
+            label="OTIF Rate" 
+            value={`${(scorecard?.otifRate || 0).toFixed(1)}%`}
+            subtext={`${scorecard?.otifCases || 0} of ${scorecard?.totalCases || 0} cases`}
+            trend={scorecard && scorecard.otifRate >= 90 ? 'up' : scorecard && scorecard.otifRate >= 70 ? 'neutral' : 'down'}
+            color="purple"
+          />
+          <KpiCard 
+            label="On-Time Rate" 
+            value={`${(scorecard?.onTimeRate || 0).toFixed(1)}%`}
+            trend={scorecard && scorecard.onTimeRate >= 90 ? 'up' : 'down'}
+            color="honey"
+          />
+        </div>
             <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
               <div className="text-sm text-gray-500">OTIF Ставка</div>
               <div className="text-2xl font-bold">{scorecard.otifRate.toFixed(1)}%</div>
@@ -294,8 +312,9 @@ export default function PerformanceScorecardPage() {
               </div>
             </div>
           </div>
-        </>
-      )}
-    </div>
+          </>
+        )}
+      </div>
+    </>
   );
 }
