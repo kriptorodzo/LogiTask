@@ -23,6 +23,13 @@ echo.
 echo [2/4] Running Prisma migrations...
 cd /d "%PROJECT_DIR%backend"
 
+REM Remove old migrations if switching from PostgreSQL to SQLite
+if exist "migrations\0000_initial.migration.sql" (
+    echo Removing old PostgreSQL migrations (switching to SQLite)...
+    rmdir /s /q migrations 2>nul
+    del migration_lock.toml 2>nul
+)
+
 REM Create .env file with default SQLite if not exists
 if not exist ".env" (
     echo Creating .env file with SQLite configuration...
@@ -39,7 +46,7 @@ for /f "usebackq tokens=1,* delims==" %%a in ("%PROJECT_DIR%backend\.env") do (
 REM Set DATABASE_URL directly in command
 echo Using DATABASE_URL: file:./dev.db
 
-call npx prisma migrate dev
+call npx prisma migrate dev --name init_sqlite
 
 echo.
 echo [3/4] Seeding database...
