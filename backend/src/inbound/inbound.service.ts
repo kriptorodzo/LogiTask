@@ -32,9 +32,9 @@ export class InboundService {
     return this.prisma.inboundItem.findMany({
       where,
       include: {
-        email: true,
-        erpDocument: true,
-        case: true,
+        emails: true,
+        erpDocuments: true,
+        cases: true,
         tasks: {
           include: { assignee: true },
         },
@@ -50,9 +50,9 @@ export class InboundService {
     return this.prisma.inboundItem.findUnique({
       where: { id },
       include: {
-        email: true,
-        erpDocument: true,
-        case: {
+        emails: true,
+        erpDocuments: true,
+        cases: {
           include: {
             email: {
               include: { tasks: true },
@@ -154,9 +154,8 @@ export class InboundService {
     const myTasks = await this.prisma.task.findMany({
       where: { assigneeId: userId },
       include: {
+        assignee: true,
         inboundItem: true,
-        email: true,
-        erpDocument: true,
       },
       orderBy: { dueDate: 'asc' },
     });
