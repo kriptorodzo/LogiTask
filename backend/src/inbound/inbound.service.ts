@@ -86,19 +86,19 @@ export class InboundService {
 
       // Pending classification (RECLAIMED status)
       this.prisma.inboundItem.count({
-        where: { processingStatus: 'RECLAIMED' },
+        where: { intakeStatus: 'RECLAIMED' },
       }),
 
       // In progress (processed but not completed)
       this.prisma.inboundItem.count({
-        where: { processingStatus: 'PROCESSED' },
+        where: { intakeStatus: 'PROCESSED' },
       }),
 
       // Completed today
       this.prisma.inboundItem.count({
         where: { 
-          processingStatus: 'PROCESSED',
-          updatedAt: { gte: todayStart },
+          intakeStatus: 'PROCESSED',
+          processedAt: { gte: todayStart },
         },
       }),
     ]);
@@ -121,7 +121,7 @@ export class InboundService {
         OR: [
           { priority: 'HIGH' },
           { 
-            processingStatus: { in: ['RECLAIMED', 'PROCESSED'] },
+            intakeStatus: { in: ['RECLAIMED', 'PROCESSED', 'FAILED'] },
             requestedDate: { lt: now },
           },
         ],
