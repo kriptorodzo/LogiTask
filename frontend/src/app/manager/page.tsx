@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { emailApi, taskApi, userApi } from '@/lib/api';
 import { Email, Task, User } from '@/types';
 import PageShell from '@/components/PageShell';
+import DelegationModal from '@/components/DelegationModal';
 import { useStatePersistence, useDebounce } from '@/lib/useStatePersistence';
 
 type TabType = 'new' | 'pending' | 'delegated' | 'problematic' | 'overdue';
@@ -20,6 +21,21 @@ export default function ManagerInboxPage() {
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
+  
+  // Delegation modal state
+  const [delegationModal, setDelegationModal] = useState<{
+    isOpen: boolean;
+    emailId: string;
+    emailSubject: string;
+    taskCount: number;
+    suggestedRole: string | undefined;
+  }>({
+    isOpen: false,
+    emailId: '',
+    emailSubject: '',
+    taskCount: 0,
+    suggestedRole: undefined,
+  });
   
   // State persistence
   const { loadState, saveState, clearState } = useStatePersistence('manager', {
@@ -172,12 +188,43 @@ export default function ManagerInboxPage() {
 
   async function handleApproveAll(emailId: string) {
     const emailTasks = getTasksForEmail(emailId).filter(t => t.status === 'PROPOSED');
-    const defaultAssignee = coordinators[0];
-    if (defaultAssignee) {
-      for (const task of emailTasks) {
-        await handleApproveTask(task.id, defaultAssignee.id);
-      }
+    const email = emails.find(e => e.id === emailId);
+    
+    if (emailTasks.length === 0) {
+      return; // No tasks to approve
     }
+    
+    // Determine suggested role based on task types
+    const taskTypes = [...new Set(emailTasks.map(t => t.requestType))];
+    const roleMap: Record<string, string> = {
+      INBOUND_RECEIPT: 'RECEPTION_COORDINATOR',
+      OUTBOUND_PREPARATION: 'DELIVERY_COORDINATOR',
+      OUTBOUND_DELIVERY: 'DELIVERY_COORDINATOR',
+      TRANSFER_DISTRIBUTION: 'DISTRIBUTION_COORDINATOR',
+    };
+    const suggestedRole = roleMap[taskTypes[0]] || 'DELIVERY_COORDINATOR';
+    
+    // Open delegation modal instead of auto-assigning
+    setDelegationModal({
+      isOpen: true,
+      emailId,
+      emailSubject: email?.subject || '',
+      taskCount: emailTasks.length,
+      suggestedRole,
+    });
+  }
+  
+  // Handle actual delegation with selected assignee
+  async function handleDelegationWithAssignee(assigneeId: string) {
+    const emailTasks = getTasksForEmail(delegationModal.emailId).filter(t => t.status === 'PROPOSED');
+    
+    // Approve each task with the selected assignee
+    for (const task of emailTasks) {
+      await handleApproveTask(task.id, assigneeId);
+    }
+    
+    // Refresh data
+    loadData();
   }
 
   function getStatusBadge(status: string): string {
@@ -455,6 +502,17 @@ export default function ManagerInboxPage() {
           </div>
         )}
       </div>
+      
+      {/* Delegation Modal */}
+      <DelegationModal
+        isOpen={delegationModal.isOpen}
+        onClose={() => setDelegationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={handleDelegationWithAssignee}
+        coordinators={coordinators}
+        emailSubject={delegationModal.emailSubject}
+        taskCount={delegationModal.taskCount}
+        suggestedRole={delegationModal.suggestedRole}
+      />
     </PageShell>
   );
 }
