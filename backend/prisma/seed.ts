@@ -373,12 +373,12 @@ async function createEmails(users: any[]) {
   console.log(`✅ Created ${scenarios.length} emails\n`);
 }
 
-function generateMoreEmails(count: number) {
-  const scenarios = [];
+function generateMoreEmails(count: number): any[] {
+  const scenarios: any[] = [];
   for (let i = 0; i < count; i++) {
     const requestType = randomElement(REQUEST_TYPES.filter(t => t !== 'UNCLASSIFIED'));
     scenarios.push({
-      subject: randomElement(SUBJECTS[requestType] || SUBJECTS.INBOUND_RECEIPT),
+      subject: randomElement(SUBJECTS[requestType as keyof typeof SUBJECTS] || SUBJECTS.INBOUND_RECEIPT),
       sender: `logistics${i}@company.mk`,
       supplier: randomElement(SUPPLIERS),
       location: randomElement(LOCATIONS),
