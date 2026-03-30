@@ -1,380 +1,161 @@
 # 1. OBJECTIVE
 
-Редизајнирање на manager и coordinator workflow-овите според реална логистичка операција, со јасно раздвојување на улоги, пристапи и одговорности. Целта е платформата да биде природна за реална употреба, со вистински role-based access control и безбедна делегациска логика.
+Целосна миграција на UI кон нов Inbound flow модел. Завршување на миграцијата така што `/inbound` ќе стане вистинскиот главен workflow за Manager и Coordinator, со што ќе се почувствува целосниот нов модел.
 
-**Напредок:** Планот е готов. Пред имплементација, потребна е Verification Round за да се потврди дека предложените промени ќе работат како што е планирано.
+**Зошто ова е следно:** Backend е добар, новиот API е добар, ама главниот UX уште не е целосно префрлен. Додека `/manager` и `/coordinator` живеат на стара логика, нема да се почувствува новиот модел.
 
 # 2. CONTEXT SUMMARY
 
-**Тековен проблем (од Code Review):**
-- Нема вистинска role separation - сите улоги гледаат исто мени
-- Coordinator може да пристапи на /admin, /reports, /performance
-- Manager гледа task-level наместо case-level
-- "Approve All" е опасен - автоматски зема прв coordinator без избор
-- Coordinator UX е табела, не workboard/kanban
-- ERP/Route Plans се видливи за coordinator
+**Тековна состојба:**
+- Постои `/inbound` page (нов модел)
+- Постои `/manager` page (стар модел)
+- Постои `/coordinator` page (стар модел)
+- Паралелни API endpoints и UI структури
 
-**Постоечки систем:**
-- Frontend: Next.js со PageShell, Sidebar, TopBar
-- Auth: NextAuth со role во session
-- Backend: NestJS со RolesGuard (неактивен)
-- Role types: MANAGER, RECEPTION_COORDINATOR, DELIVERY_COORDINATOR, DISTRIBUTION_COORDINATOR
+**Проблем:**
+- Новиот inbound API/UI не е主场 - корисниците сè уште користат стари страници
+- Дублирана логика и одржување
+- Новиот inbound модел не е целосно искористен
+
+**Goal:**
+- `/inbound` стане официјален Manager Inbox
+- Manager и Coordinator работат од иста основа (inbound chain)
+- Detail views се усогласат
+- Legacy cleanup
 
 # 3. APPROACH OVERVIEW
 
-**Стратегија:** Имплементација во 7 фази:
+**Стратегија:** UI Consolidation кон Inbound Flow
 
-0. **Verification Round** - верификација на тековниот код и proposed changes
-1. **Role-based route protection** - middleware/guards за блокирање на неовластени рути
-2. **Role-specific navigation** - различни sidebar менюа по улога
-3. **Manager workflow redesign** - case/email-driven наместо task-table-driven
-4. **Coordinator workflow redesign** - workboard/kanban view со filters
-5. **ERP/Admin scope cleanup** - само Manager/Admin пристап
-6. **Safe delegation flow** - "Approve All" бара assignee selection
+1. **Inbound е нов главен workflow** - сите главни страници покажуваат кон `/inbound`
+2. **Role-based filtering** - истата основа за Manager и Coordinator
+3. **Detail unification** - `/inbound/[id]` како главен екран
+4. **Legacy cleanup** - означување и отстранување на стари страници
 
-** rationale:** Овие промени се директно базирани на code review findings и ја адресираат секцијата "3. Rework manager/coordinator logic before continuing".
+---
 
 # 4. IMPLEMENTATION STEPS
 
-## Phase 0: Verification Round (Пред имплементација)
+## Phase 1: Sidebar Navigation Update
 
-### Step 0.1: RBAC / Route Protection Verification
+### Step 1.1: Додај `/inbound` во sidebar
+**Goal:** Новиот inbound стане прв избор во навигацијата
+**Method:** Замени го "Manager Inbox" линкот со `/inbound`
 
-**Goal:** Потврди дека route protection логиката е коректна
-**Method:** Преглед на постоечки middleware + auth логика
-
-**Проверки:**
-- [ ] Дали middleware.ts може да пристапи до session/role?
-- [ ] Дали NextAuth session содржи role информација?
-- [ ] Кои рути треба да се блокираат за coordinator?
-- [ ] Дали middleware е доволен или треба и server-side guards?
-
-**Files:** `frontend/src/middleware.ts`, `frontend/src/lib/auth.ts`, `frontend/src/app/manager/page.tsx`, `frontend/src/app/coordinator/page.tsx`
-
----
-
-### Step 0.2: Role Navigation Validation
-
-**Goal:** Потврди каква navigation треба за секоја улога
-**Method:** Преглед на Sidebar.tsx и споредба со proposed navigation maps
-
-**Проверки:**
-- [ ] Кои менија ги гледа Manager сега?
-- [ ] Кои менија ги гледа Coordinator сега?
-- [ ] Дали role е достапен во компонентите?
-- [ ] Како да се спроведе role-based filtering?
-
-**Files:** `frontend/src/components/Sidebar.tsx`, `frontend/src/components/TopBar.tsx`
+**Files:** `frontend/src/components/Sidebar.tsx`
+**Action:**
+```typescript
+// Во Sidebar.tsx, замени:
+{ href: '/manager', label: 'Manager Inbox', icon: '📥' }
+// Со:
+{ href: '/inbound', label: 'Inbox', icon: '📥' }
+```
 
 ---
 
-### Step 0.3: Manager Workflow Validation
-
-**Goal:** Потврди дека manager inbox logic е разбирлива
-**Method:** Преглед на manager page.tsx
-
-**Проверки:**
-- [ ] Дали email/case cards постојат или само task table?
-- [ ] Каде е "Approve All" логиката и дали е опасна?
-- [ ] Дали постои suggested delegation block?
-- [ ] Дали problematic/unclassified emails се идентификуваат?
+### Step 1.2: Redirect `/manager` кон `/inbound`
+**Goal:** Старата Manager страница веднаш води кон новата
+**Method:** Додади redirect во `/manager/page.tsx`
 
 **Files:** `frontend/src/app/manager/page.tsx`
-
----
-
-### Step 0.4: Coordinator Workflow Validation
-
-**Goal:** Потврди coordinator experience
-**Method:** Преглед на coordinator page.tsx
-
-**Проверки:**
-- [ ] Дали е табела или веќе има workboard елементи?
-- [ ] Кои tabs постојат и дали се логични?
-- [ ] Дали има filter по task type?
-- [ ] Кои quick actions постојат?
-
-**Files:** `frontend/src/app/coordinator/page.tsx`
-
----
-
-### Step 0.5: End-to-End Manual Test Readiness
-
-**Goal:** Потврди дека системот е спремен за рачно тестирање
-**Method:** Преглед на API endpoints + seed data
-
-**Проверки:**
-- [ ] Дали има доволно seed data за тестирање?
-- [ ] Кои API endpoints враќаат tasks за coordinator?
-- [ ] Дали emails и tasks се поврзани?
-- [ ] Што уште е слабо за рачно тестирање?
-
-**Files:** `backend/src/task/task.controller.ts`, `backend/src/task/task.service.ts`
-
----
-
-### Step 0.6: Verification Summary
-
-**Goal:** Документирај што е потврдено и што не е
-**Method:** Креирај извештај
-
-**На крај дај кратка нова оцена:**
-- Role separation: X/10
-- Manager workflow: X/10
-- Coordinator workflow: X/10
-- Delegation safety: X/10
-- Overall product clarity: X/10
-
-**Одлука:** Дали continue со имплементација или дополнителни preparation чекори?
-
----
-
-## Phase 4 — Manual Product Validation & UX Simplification
-
-(После успешна имплементација на Phase 1-3)
-
-### Цел
-Да се провери дали новата логика е навистина добра за секојдневна оперативна употреба и да се идентификуваат останатите UX проблеми пред следна development фаза.
-
-### 1. Manager UX Validation
-Провери:
-- дали manager inbox е доволно јасен
-- дали cards се разбирливи на прв поглед
-- дали summary + warnings + suggestions се доволни
-- дали manager лесно разбира што треба да одобри, што да класифицира и што да делегира
-- дали inbox е и понатаму премногу task-heavy
-- дали треба уште повеќе case/email-first simplification
-
-### 2. Coordinator UX Validation
-Провери:
-- дали workboard е едноставен и брз
-- дали tabs се корисни
-- дали filters се реално потребни или има вишок
-- дали task cards се доволно читливи
-- дали Start / Complete flow е доволно брз
-- дали coordinator experience е чист и фокусиран само на извршување
-
-### 3. ERP/Admin UX Validation
-Провери:
-- дали ERP dashboard е јасен
-- дали import flow е разбирлив за business user
-- дали route plans се доволно логични
-- дали има премногу технички детали
-- дали треба поедноставување на import / preview / validation screens
-
-### 4. Reports Validation
-Провери:
-- дали reports се корисни за manager decision-making
-- дали KPI/OTIF/drilldowns се лесни за разбирање
-- дали navigation низ reports е природна
-- дали нешто е премногу техничко или непотребно
-
-### 5. Final UX Cleanup Proposal
-На крај дај:
-- што треба да се поедностави
-- што треба да се отстрани
-- што треба да се редизајнира
-- што треба да остане како што е
-
-### Output
-Дај краток извештај:
-1. што е добро
-2. што уште е слабо
-3. кои 5 UX подобрувања имаат најголема вредност
-4. дали системот е спремен за сериозно рачно тестирање од manager и coordinators
-
----
-
-## Phase 1: Role-Based Route Protection
-
-### Step 1.1: Проширување на middleware.ts
-**Goal:** Блокирање на неовластени рути на frontend ниво
-**Method:** Додавање на pathname checks според role
-
-**Files:** `frontend/src/middleware.ts`
 **Action:**
 ```typescript
-// Add role-based route blocking
-const roleRoutes: Record<string, string[]> = {
-  MANAGER: ['/admin', '/reports', '/performance'],
-  RECEPTION_COORDINATOR: ['/admin', '/manager', '/reports', '/performance'],
-  // etc.
-};
+// На почеток на page.tsx:
+import { redirect } from 'next/navigation';
+// Во component или redirect:
+redirect('/inbound');
 ```
 
 ---
 
-## Phase 2: Role-Specific Navigation
+## Phase 2: Coordinator Migration to Inbound API
 
-### Step 2.1: Редизајн на Sidebar.tsx
-**Goal:** Различно sidebar мени по улога
-**Method:** Условно рендерирање на navItems според session role
-
-**File:** `frontend/src/components/Sidebar.tsx`
-**Action:** Додавање на role-based filtering
-
-### Step 2.2: Дефинирање на navigation maps
-**Goal:** Јасни navigation структури за секоја улога
-**Method:** Креирање на константи за секоја улога
-
-**Proposed Navigation Map:**
-
-**MANAGER:**
-- Dashboard (`/`)
-- Inbox / Cases (`/manager`)
-- Reports (`/reports`)
-- ERP (`/admin/erp`)
-- Performance (`/admin/performance`)
-
-**COORDINATOR (сите типови):**
-- My Workboard (`/coordinator`)
-- Today (`/coordinator?filter=today`)
-- Overdue (`/coordinator?filter=overdue`)
-- Completed (`/coordinator?filter=done`)
-
-**ADMIN:**
-- ERP (`/admin/erp`)
-- Route Plans (`/admin/erp/routes`)
-- Users (`/admin/users`)
-- System Settings (`/admin/settings`)
-
----
-
-## Phase 3: Manager Workflow Redesign
-
-### Step 3.1: Преструктурирање на Manager page
-**Goal:** Case/email-driven наместо task-table-driven
-**Method:** Промена на UI од task list кон case cards
-
-**File:** `frontend/src/app/manager/page.tsx`
-**Action:** 
-- Email/Case cards како примарно
-- Extracted summary (supplier, location, due date, urgency)
-- Missing data / problematic state indicators
-- Suggested delegation block
-- Action buttons: Approve, Reject, Classify, Delegate
-
-### Step 3.2: Тргање на опасната default assignee логика
-**Goal:** "Approve All" да не доделува автоматски на прв coordinator
-**Method:** Додавање на assignee selection modal/confirmation
-
-**File:** `frontend/src/app/manager/page.tsx`
-**Action:**
-- Кога manager кликне "Approve All", се отвора dropdown за избор на coordinator
-- Или се бара експлицитен избор пред одобрување
-- Промена на `handleApproveAll` функцијата
-
-### Step 3.3: Додавање на bulk approve со selection
-**Goal:** Ако има bulk approve, да бара assignee selection
-**Method:** Modal или inline confirmation
-
-**Action:**
-```typescript
-// Instead of:
-async function handleApproveAll(emailId: string) {
-  const defaultAssignee = coordinators[0]; // DANGEROUS
-  ...
-}
-
-// New approach:
-async function handleApproveAll(emailId: string, selectedAssigneeId: string) {
-  // Require explicit selection
-}
-```
-
----
-
-## Phase 4: Coordinator Workflow Redesign
-
-### Step 4.1: Креирање на Workboard/Kanban View
-**Goal:** Coordinator да гледа task board наместо табела
-**Method:** имплементација на drag-drop kanban или filterable cards
+### Step 2.1: Coordinator да чита од ист inbound chain
+**Goal:** Coordinator и Manager работат од истата основа
+**Method:** Промена на coordinator page да го користи inbound API
 
 **File:** `frontend/src/app/coordinator/page.tsx`
 **Action:**
-- Columns: New (PROPOSED), In Progress, Done
-- Drag-drop functionality (опционално)
-- Или filterable card view со quick actions
+- Замени го taskApi.getMyTasks() со inbound API
+- Филтрирај само items релевантни за coordinator role
+- Зачувај го coordinator-specific UX (tabs, filters)
 
-### Step 4.2: Додавање на filters по role-relevant task type
-**Goal:** Coordinator да може да филтрира по својот тип
-**Method:** Filter dropdown за request type
+### Step 2.2: Coordinator URL кон inbound pattern
+**Goal:** URL структурата да следи ист модел
+**Method:** `/coordinator` станува дел од `/inbound` ecosystem
 
-**Filters:**
-- Filter by task type (Inbound, Prep, Delivery, Distribution)
-- Only assigned tasks (assigneeId === currentUser.id)
-- Date filters (today, this week, overdue)
-
-### Step 4.3: Quick actions на task cards
-**Goal:** Брзо Start/Complete/Add note
-**Method:** Action buttons на секој card
-
-**Actions:**
-- Start → `IN_PROGRESS`
-- Complete → `DONE` (со optional result/note)
-- Add note → отвора comment/result modal
-
-### Step 4.4: Ремапирање на coordinator tabs
-**Goal:** Поедноставена структура
-**Method:** Нови tab категории
-
-**Proposed Tabs:**
-- Мои задачи (assigned to me, all statuses)
-- Денешни (due today)
-- Во тек (IN_PROGRESS)
-- Доцне (overdue)
-- Завршени (DONE)
+**Option A:** `/inbox/coordinator` (read-only view од ист API)
+**Option B:** `/inbound?role=coordinator` (filter-based)
 
 ---
 
-## Phase 5: ERP/Admin Scope Cleanup
+## Phase 3: Detail Views Unification
 
-### Step 5.1: Блокирање на ERP routes за coordinator
-**Goal:** ERP import, route plans да бидат Manager/Admin-only
-**Method:** Route protection + sidebar hiding
+### Step 3.1: `/inbound/[id]` како главен detail screen
+**Goal:** Еден detail екран за сите roles
+**Method:** Насочи ги сите линкови кон `/inbound/[id]`
 
-**Files:** `frontend/src/middleware.ts`, `frontend/src/components/Sidebar.tsx`
+**File:** `frontend/src/app/inbound/[id]/page.tsx`
 **Action:**
-- `/admin/erp/*` → само MANAGER
-- `/admin/erp/routes` → само MANAGER
-- `/admin/performance` → MANAGER, ADMIN
-- Coordinator sidebar нема ги нема овие линкови
+- Ажурирај го да го прикаже whole case context
+- Додади actions за Manager (approve, reject, classify, delegate)
+- Додади actions за Coordinator (start, complete, add note)
+- Рендерирај според role
 
-### Step 5.2: Проверка на ERP import UX
-**Goal:** Дали import flow е јасен за business user
-**Method:** Review на `/admin/erp/import`
+### Step 3.2: Насочи ги Actions кон `/inbound/[id]`
+**Goal:** Сите action buttons да водат кон нов detail екран
+**Method:** Ажурирај ги линковите во cards и lists
 
-**Action:**
-- Додавање на examples/templates
-- Подобрување на error messages
-- Проверка дали едоводи кон coordinator tasks логично
-
-### Step 5.3: Route Plans како business rule setup
-**Goal:** Претставување како business configuration, не admin функција
-**Method:** Промена на UI/labels ако треба
+**Files:** `frontend/src/app/inbound/page.tsx`, components
 
 ---
 
-## Phase 6: Safe Delegation Flow
+## Phase 4: Legacy Cleanup
 
-### Step 6.1: Креирање на delegation modal
-**Goal:**approveAll бара избор на assignee
-**Method:** Нова компонента за assignee selection
+### Step 4.1: Означи ги старите страници како deprecated
+**Goal:** Корисниците да знаат дека треба да мигрираат
+**Method:** Додади deprecation banner или замени ги со redirects
 
-**File:** `frontend/src/components/DelegationModal.tsx` (new)
+**Files:**
+- `/app/emails/[id]/page.tsx` → redirect to `/inbound/[id]`
+- `/app/tasks/[id]/page.tsx` → redirect to `/inbound/[id]`
+- `/app/manager/page.tsx` → redirect to `/inbound`
+
+### Step 4.2: Тргни ги старите manual frontend aggregations
+**Goal:** Нема повеќе duplicates
+**Method:** Користи само еден data fetching пат
+
+**Files:** `frontend/src/lib/api.ts`
 **Action:**
-- При "Approve All" клик, се отвора modal
-- Прикажува координатори релевантни за task types
-- Manager избира експлицитно
-- Submit креира tasks со избраниот assignee
+- Ако постојат two ways да се fetch-ат tasks, остави само едниот
+- Inbound API стане единствен извор
 
-### Step 6.2: Default assignee settings (опционално)
-**Goal:** Можност за default assignee per role во settings
-**Method:** User settings API
+### Step 4.3: Тргни го legacy manager fetching logic
+**Goal:** Чист код
+**Method:** Ако постои стар manager-specific fetching, отстрани го
 
-**Action:**
-- Manager може да подеси "default coordinator за Delivery tasks"
-- Тие default вредности се користат кога нема експлицитен избор
+**Files:** `frontend/src/app/manager/*` (освен redirect)
+
+---
+
+## Phase 5: Post-Migration Validation
+
+### Step 5.1: Провери дека сите flows работат
+**Goal:** Нема breaking changes
+**Method:** Manual test
+
+**Проверки:**
+- [ ] Manager може да го отвори inbox
+- [ ] Manager може да кликне на case и да види detail
+- [ ] Manager може да одобри/одбие/класифицира
+- [ ] Coordinator може да ги види своите tasks
+- [ ] Coordinator може да стартува/заврши task
+
+### Step 5.2: Провери дека legacy URLs работат за backward compat
+**Goal:** Ако некој имаbookmarks, да не се скршат
+**Method:** Redirect кон соодветни нови страници
+
+**Note:** Ова е optional - може и целосно да се отстранат ако е internal tool
 
 ---
 
@@ -382,45 +163,32 @@ async function handleApproveAll(emailId: string, selectedAssigneeId: string) {
 
 ## Validation Criteria
 
-**Role-Based Access:**
-- [ ] Coordinator не може да пристапи на /admin
-- [ ] Coordinator не може да пристапи на /reports
-- [ ] Coordinator не може да пристапи на /performance
-- [ ] Manager може да пристапи на сите свои рути
-- [ ] Admin може да пристапи на ERP и routes
-
 **Navigation:**
-- [ ] Manager sidebar: Dashboard, Inbox, Reports, ERP, Performance
-- [ ] Coordinator sidebar: My Workboard, Today, Overdue, Completed
-- [ ] Admin sidebar: ERP, Routes, Users, Settings
-- [ ] Активниот линк е highlighting
+- [ ] Sidebar покажува `/inbound` како прв линк
+- [ ] `/manager` редиректира кон `/inbound`
+- [ ] `/coordinator` користи ист API како `/inbound`
 
-**Manager Workflow:**
-- [ ] Case/Email cards со extracted summary
-- [ ] Missing data indicators (warning за непознати полиња)
-- [ ] "Approve All" прашува за assignee
-- [ ] Ручна делегација работи
-- [ ] Classification на UNCLASSIFIED работи
+**Manager Flow:**
+- [ ] Може да го отвори inbox
+- [ ] Може да кликне на case → `/inbound/[id]`
+- [ ] Може да одобри, одбие, класифицира, делегира
 
-**Coordinator Workflow:**
-- [ ] Workboard/Kanban приказ (или filterable cards)
-- [ ] Filter по task type работи
-- [ ] Quick actions (Start, Complete) работат
-- [ ] Task details се прикажуваат
+**Coordinator Flow:**
+- [ ] Гледа само релевантни items за својата role
+- [ ] Може да стартува task
+- [ ] Може да заврши task
 
-**ERP/Admin Cleanup:**
-- [ ] ERP routes блокирани за coordinator
-- [ ] Route Plans само за Manager/Admin
-- [ ] Import flow е business-friendly
+**Detail Views:**
+- [ ] `/inbound/[id]` прикажува цел case
+- [ ] Role-based actions се прикажуваат
 
-**Safe Delegation:**
-- [ ] Approve All бара assignee selection
-- [ ] Нема автоматско доделување на прв coordinator
-- [ ] Delegate to role (не specific person) опционално
+**Legacy Cleanup:**
+- [ ] Старите страници означени или пренасочени
+- [ ] Нема duplicate API fetching логика
 
 ## Success Metrics
 
-1. **Platform logic е поприродна за реална употреба** - секоја улога гледа само она што ѝ треба
-2. **Нема security gaps** - сите рути се заштитени
-3. **UX е подобрен** - coordinator има workboard, manager гледа cases
-4. **Delegation е безбедна** - нема automatic assignment без избор
+1. **Единствен workflow** - сите користат `/inbound` како основа
+2. **Role-based filtering** - ист API за Manager и Coordinator
+3. **Чист UI** - нема duplicate страници
+4. **Подобар UX** - подобар од старата Manager/Coordinator логика

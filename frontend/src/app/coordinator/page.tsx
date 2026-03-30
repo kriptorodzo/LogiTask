@@ -3,8 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { taskApi } from '@/lib/api';
-import { Task, TASK_STATUS } from '@/types';
+import { inboundApi, taskApi } from '@/lib/api';
 import PageShell from '@/components/PageShell';
 import { useStatePersistence, useDebounce } from '@/lib/useStatePersistence';
 
@@ -28,8 +27,8 @@ const ROLE_DEFAULT_FILTER: Record<string, FilterType> = {
 export default function CoordinatorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [allTasks, setAllTasks] = useState<Task[]>([]); // Store all for filtering
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [allTasks, setAllTasks] = useState<any[]>([]); // Store all for filtering
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('my');
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
@@ -38,6 +37,7 @@ export default function CoordinatorPage() {
   
   // Get user role
   const userRole = (session?.user as any)?.role || 'RECEPTION_COORDINATOR';
+  const userId = session?.user?.email;
   
   // Get default filter for role
   const getDefaultFilter = (): FilterType => {
@@ -71,8 +71,6 @@ export default function CoordinatorPage() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [toast, setToast] = useState<{message: string; type: 'success' | 'error'} | null>(null);
 
-  const userId = session?.user?.email;
-
   // Toast helper
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -86,18 +84,19 @@ export default function CoordinatorPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session) {
-      loadAllTasks();
+    if (session && userId) {
+      loadData();
     }
-  }, [session]);
+  }, [session, userId]);
 
-  async function loadAllTasks() {
+  async function loadData() {
     setLoading(true);
     try {
-      // Get all tasks for the current user
-      const tasksData = await taskApi.getMyTasks();
-      setAllTasks(tasksData);
-      filterTasks(tasksData, activeTab, typeFilter);
+      // NEW: Use inbound API for coordinator workboard
+      const data = await inboundApi.getCoordinatorSummary(userId);
+      const coordinatorTasks = data.myTasks || [];
+      setAllTasks(coordinatorTasks);
+      filterTasks(coordinatorTasks, activeTab, typeFilter);
     } catch (error) {
       console.error('Failed to load tasks:', error);
     } finally {
@@ -105,7 +104,12 @@ export default function CoordinatorPage() {
     }
   }
 
-  function filterTasks(tasksToFilter: Task[], tab: Tab, filter: FilterType) {
+  async function loadAllTasks() {
+    // Use loadData instead - it's already using inbound API
+    await loadData();
+  }
+
+  function filterTasks(tasksToFilter: any[], tab: Tab, filter: FilterType) {
     let filtered = tasksToFilter;
     
     // Filter by tab

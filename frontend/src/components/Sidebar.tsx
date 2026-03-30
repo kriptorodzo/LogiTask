@@ -8,22 +8,22 @@ import { useSession } from 'next-auth/react';
 const NAV_CONFIG = {
   MANAGER: [
     { href: '/', label: 'Dashboard', icon: '📊' },
-    { href: '/manager', label: 'Inbox', icon: '📥' },
+    { href: '/inbound', label: 'Inbox', icon: '📥' },
     { href: '/reports', label: 'Reports', icon: '📈' },
     { href: '/admin/erp', label: 'ERP', icon: '🏭' },
     { href: '/admin/performance', label: 'Performance', icon: '🏆' },
   ],
   RECEPTION_COORDINATOR: [
     { href: '/', label: 'Dashboard', icon: '📊' },
-    { href: '/coordinator', label: 'My Tasks', icon: '📋' },
+    { href: '/inbound', label: 'My Tasks', icon: '📋' },
   ],
   DELIVERY_COORDINATOR: [
     { href: '/', label: 'Dashboard', icon: '📊' },
-    { href: '/coordinator', label: 'My Tasks', icon: '📋' },
+    { href: '/inbound', label: 'My Tasks', icon: '📋' },
   ],
   DISTRIBUTION_COORDINATOR: [
     { href: '/', label: 'Dashboard', icon: '📊' },
-    { href: '/coordinator', label: 'My Tasks', icon: '📋' },
+    { href: '/inbound', label: 'My Tasks', icon: '📋' },
   ],
   ADMIN: [
     { href: '/admin', label: 'Admin', icon: '⚙️' },
