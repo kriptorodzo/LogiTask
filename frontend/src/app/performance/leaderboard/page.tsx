@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { performanceApi } from '@/lib/api';
-import TopBar from '@/components/TopBar';
+import PageShell from '@/components/PageShell';
 
 interface LeaderboardEntry {
   rank: number;
@@ -118,16 +118,8 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <>
-      <TopBar 
-        title="Performance Leaderboard"
-        subtitle="Monthly coordinator rankings by OTIF score"
-        breadcrumbs={[
-          { label: 'Performance', href: '/performance/leaderboard' },
-          { label: 'Leaderboard' }
-        ]}
-      />
-      <div className="page-content">
+    <PageShell title="Performance Leaderboard" subtitle="Monthly coordinator rankings by OTIF score">
+      <div className="p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">Листа на перформанси</h2>
@@ -230,6 +222,6 @@ export default function LeaderboardPage() {
         </div>
       </div>
       </div>
-    </>
+    </PageShell>
   );
 }

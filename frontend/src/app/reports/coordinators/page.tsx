@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { reportsApi } from '@/lib/api';
+import PageShell from '@/components/PageShell';
 
 interface Coordinator {
   coordinatorUserId: string;

@@ -1,14 +1,14 @@
 'use client';
 
-import React, { Suspense, lazy, ComponentType } from 'react';
-import { SkeletonCard } from './Skeleton';
+import React, { Suspense, lazy, ReactNode, ComponentType } from 'react';
+import { SkeletonCard } from '@/components/Skeleton';
 
 /**
  * Lazy load a component with loading fallback
  */
 export function lazyWithFallback<T extends ComponentType<any>>(
   importFn: () => Promise<{ default: T }>,
-  Fallback?: ComponentType
+  Fallback?: React.ReactNode
 ) {
   const LazyComponent = lazy(importFn);
   
@@ -44,7 +44,7 @@ export function useIntersectionObserver(
   options: IntersectionObserverInit = {}
 ) {
   const [isIntersecting, setIsIntersecting] = React.useState(false);
-  const ref = React.useRef<HTMLElement>(null);
+  const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {

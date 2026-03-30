@@ -370,27 +370,21 @@ export default function ReportsOverviewV2Page() {
 
   if (loading) {
     return (
-      <div>
-        <Header isManager={true} />
-        <div className="container">
-          <div className="empty-state">
-            <h3>Loading...</h3>
-          </div>
+      <PageShell title="Reports Overview" subtitle="Loading...">
+        <div className="p-6">
+          <div className="text-center">Loading...</div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (!overview) {
     return (
-      <div>
-        <Header isManager={true} />
-        <div className="container">
-          <div className="empty-state">
-            <h3>No data available</h3>
-          </div>
+      <PageShell title="Reports Overview" subtitle="No data">
+        <div className="p-6">
+          <div className="text-center">No data available</div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
@@ -614,7 +608,6 @@ export default function ReportsOverviewV2Page() {
           </div>
         )}
       </div>
-    </div>
     </PageShell>
   );
 }

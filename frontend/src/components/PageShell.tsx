@@ -12,7 +12,7 @@ interface PageShellProps {
   backHref?: string;
 }
 
-const MODULE_BREADCRUMBS: Record<string, { label: string; href: string }[]> = {
+const MODULE_BREADCRUMBS: Record<string, { label: string; href?: string }[]> = {
   '/reports/coordinators': [
     { label: 'Reports', href: '/reports' },
     { label: 'Coordinators' },

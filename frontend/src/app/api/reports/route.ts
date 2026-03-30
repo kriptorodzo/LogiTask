@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       `${BACKEND_URL}/reports/overview${queryString ? `?${queryString}` : ''}`,
       {
         headers: {
-          'Authorization': `Bearer ${session.accessToken}`,
+          'Authorization': `Bearer ${(session as any).accessToken}`,
         },
       }
     );

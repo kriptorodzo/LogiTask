@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { taskApi } from '@/lib/api';
 import { Task, TASK_STATUS } from '@/types';
-import TopBar from '@/components/TopBar';
+import PageShell from '@/components/PageShell';
 
 type Tab = 'my' | 'in_progress' | 'done' | 'overdue';
 
@@ -123,25 +123,17 @@ export default function CoordinatorPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="container">
-        <Header />
+      <PageShell title="Coordinator Board" subtitle="Loading...">
         <div style={{ textAlign: 'center', padding: '40px' }}>
           <p>Вчитување...</p>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <>
-      <TopBar 
-        title="Coordinator Board"
-        subtitle={`Your role: ${userRole}`}
-        breadcrumbs={[
-          { label: 'Coordinator Board' }
-        ]}
-      />
-      <div className="page-content">
+    <PageShell title="Coordinator Board" subtitle="Your role: ${userRole}">
+      <div className="p-6">
         <div style={{ marginBottom: '20px' }}>
           <h2>Координаторска табла</h2>
           <p style={{ color: '#666' }}>
@@ -273,6 +265,6 @@ export default function CoordinatorPage() {
         </div>
       )}
       </div>
-    </>
+    </PageShell>
   );
 }

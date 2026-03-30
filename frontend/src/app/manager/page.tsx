@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { emailApi, taskApi, userApi } from '@/lib/api';
 import { Email, Task, User } from '@/types';
-import Header from '@/components/Header';
-import TopBar from '@/components/TopBar';
+import PageShell from '@/components/PageShell';
 
 type TabType = 'new' | 'pending' | 'delegated' | 'problematic' | 'overdue';
 
@@ -210,18 +209,8 @@ export default function ManagerInboxPage() {
   };
 
   return (
-    <>
-      <TopBar 
-        title="Manager Inbox"
-        subtitle="Review and approve tasks from email processing"
-        breadcrumbs={[
-          { label: 'Manager Inbox' }
-        ]}
-      />
-      <div className="page-content">
-        <h1 style={{ marginBottom: '24px' }}>📋 Manager Dashboard</h1>
-        
-        {/* Tabs */}
+    <PageShell title="Manager Inbox" subtitle="Review and approve tasks">
+      <div className="p-6">
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
           {(['new', 'pending', 'delegated', 'problematic', 'overdue'] as TabType[]).map(tab => (
             <button
@@ -416,6 +405,6 @@ export default function ManagerInboxPage() {
           </div>
         )}
       </div>
-    </>
+    </PageShell>
   );
 }

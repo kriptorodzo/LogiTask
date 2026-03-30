@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { reportsApi } from '@/lib/api';
 import Link from 'next/link';
-import TopBar from '@/components/TopBar';
+import PageShell from '@/components/PageShell';
 
 interface OverviewMetrics {
   totalCases: number;
@@ -115,21 +115,8 @@ export default function ReportsPage() {
   }
 
   return (
-    <>
-      <TopBar 
-        title="Reports & OTIF"
-        subtitle="Operational performance metrics"
-        breadcrumbs={[
-          { label: 'Reports', href: '/reports' },
-          { label: 'OTIF Dashboard' }
-        ]}
-        actions={
-          <Link href="/reports/scorecard" className="btn btn-primary">
-            My Scorecard
-          </Link>
-        }
-      />
-      <div className="page-content">
+    <PageShell title="Reports & OTIF" subtitle="Operational performance metrics">
+      <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <div className="flex gap-2">
             <input
@@ -262,6 +249,6 @@ export default function ReportsPage() {
         </div>
       </div>
       </div>
-    </>
+    </PageShell>
   );
 }

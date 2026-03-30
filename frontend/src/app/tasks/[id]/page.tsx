@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { taskApi, userApi } from '@/lib/api';
 import { Task, User, TaskStatus } from '@/types';
-import TopBar from '@/components/TopBar';
+import PageShell from '@/components/PageShell';
 import BackButton from '@/components/BackButton';
 
 export default function TaskDetailPage() {
@@ -106,19 +106,8 @@ export default function TaskDetailPage() {
   }
 
   return (
-    <>
-      <TopBar 
-        title="Task Details"
-        subtitle={task?.title || 'Loading...'}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: 'Task Details' }
-        ]}
-        actions={
-          <BackButton href="/" label="Dashboard" />
-        }
-      />
-      <div className="page-content">
+    <PageShell title="Task Details" subtitle={task?.title || 'Loading...'}>
+      <div className="p-6">
         <div className="grid grid-2">
           {/* Task Info */}
           <div className="card">
@@ -263,6 +252,6 @@ export default function TaskDetailPage() {
           </div>
         )}
       </div>
-    </>
+    </PageShell>
   );
 }

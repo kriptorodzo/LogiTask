@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import TopBar from '@/components/TopBar';
+import PageShell from '@/components/PageShell';
 import { KpiCard, StatusBadge } from '@/components';
 
 interface ErpDocument {
@@ -90,15 +90,8 @@ export default function ErpAdminPage() {
   }, []);
 
   return (
-    <>
-      <TopBar 
-        title="ERP Administration"
-        subtitle="Manage ERP imports, documents, and route plans"
-        breadcrumbs={[
-          { label: 'ERP', href: '/admin/erp' }
-        ]}
-      />
-      <div className="page-content">
+    <PageShell title="ERP Administration" subtitle="Manage ERP integrations">
+      <div className="p-6">
         {/* Quick Actions */}
         <div className="erp-actions">
           <Link href="/admin/erp/import" className="erp-action-card erp-action-primary">
@@ -280,6 +273,6 @@ export default function ErpAdminPage() {
           )}
         </div>
       </div>
-    </>
+    </PageShell>
   );
 }

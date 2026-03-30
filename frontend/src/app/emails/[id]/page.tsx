@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { emailApi, taskApi, userApi } from '@/lib/api';
 import { Email, Task, User } from '@/types';
-import TopBar from '@/components/TopBar';
+import PageShell from '@/components/PageShell';
 import BackButton from '@/components/BackButton';
 
 // Human-readable task type labels
@@ -198,19 +198,8 @@ export default function EmailDetailPage() {
   const hasAnyTasks = email.tasks && email.tasks.length > 0;
 
   return (
-    <>
-      <TopBar 
-        title="Email Details"
-        subtitle={email?.subject || 'Loading...'}
-        breadcrumbs={[
-          { label: 'Manager Inbox', href: '/manager' },
-          { label: 'Email Details' }
-        ]}
-        actions={
-          <BackButton href="/manager" label="Manager Inbox" />
-        }
-      />
-      <div className="page-content">
+    <PageShell title="Email Details" subtitle={email?.subject || 'Loading...'}>
+      <div className="p-6">
         {/* Action Buttons for Manager */}
         {isManager && (
           <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -577,6 +566,6 @@ export default function EmailDetailPage() {
           )}
         </div>
       </div>
-    </>
+    </PageShell>
   );
 }

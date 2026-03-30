@@ -153,9 +153,7 @@ export function usePrefetch<T>(
 export function useBatchFetch<T extends Record<string, () => Promise<any>>>(
   fetchers: T
 ) {
-  const [data, setData] = useState<{
-    [K in keyof T]: Awaited<ReturnType<T[K]>> | null;
-  }>;
+  const [data, setData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, Error>>({});
   const [isLoading, setIsLoading] = useState(true);
 

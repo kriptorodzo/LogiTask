@@ -9,7 +9,7 @@ export async function GET_myTasks(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -22,7 +22,7 @@ export async function GET_myTasks(request: NextRequest) {
 
     const response = await fetch(url, {
       headers: {
-        'Authorization': `Bearer ${session.accessToken}`,
+        'Authorization': `Bearer ${(session as any).accessToken}`,
       },
     });
 
@@ -39,7 +39,7 @@ export async function POST_approve(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -50,7 +50,7 @@ export async function POST_approve(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.accessToken}`,
+        'Authorization': `Bearer ${(session as any).accessToken}`,
       },
       body: JSON.stringify({ assigneeId }),
     });
@@ -68,7 +68,7 @@ export async function POST_complete(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -79,7 +79,7 @@ export async function POST_complete(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.accessToken}`,
+        'Authorization': `Bearer ${(session as any).accessToken}`,
       },
       body: JSON.stringify({ result }),
     });

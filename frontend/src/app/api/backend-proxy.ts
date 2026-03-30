@@ -17,8 +17,8 @@ async function forwardToBackend(
     'Content-Type': 'application/json',
   };
 
-  if (session?.accessToken) {
-    headers['Authorization'] = `Bearer ${session.accessToken}`;
+  if ((session as any)?.accessToken) {
+    headers['Authorization'] = `Bearer ${(session as any).accessToken}`;
   }
 
   const options: RequestInit = {
@@ -43,7 +43,7 @@ async function forwardToBackend(
 export async function GET_emails(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -51,7 +51,7 @@ export async function GET_emails(request: NextRequest) {
     const params = Object.fromEntries(searchParams);
 
     const response = await fetch(`${BACKEND_URL}/emails?${new URLSearchParams(params)}`, {
-      headers: { 'Authorization': `Bearer ${session.accessToken}` },
+      headers: { 'Authorization': `Bearer ${(session as any).accessToken}` },
     });
 
     const data = await response.json();
@@ -69,7 +69,7 @@ export async function GET_emails(request: NextRequest) {
 export async function GET_tasks(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -77,7 +77,7 @@ export async function GET_tasks(request: NextRequest) {
     const params = Object.fromEntries(searchParams);
 
     const response = await fetch(`${BACKEND_URL}/tasks?${new URLSearchParams(params)}`, {
-      headers: { 'Authorization': `Bearer ${session.accessToken}` },
+      headers: { 'Authorization': `Bearer ${(session as any).accessToken}` },
     });
 
     const data = await response.json();
@@ -91,7 +91,7 @@ export async function GET_tasks(request: NextRequest) {
 export async function POST_taskApprove(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -102,7 +102,7 @@ export async function POST_taskApprove(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.accessToken}`,
+        'Authorization': `Bearer ${(session as any).accessToken}`,
       },
       body: JSON.stringify({ assigneeId }),
     });
@@ -118,7 +118,7 @@ export async function POST_taskApprove(request: NextRequest) {
 export async function POST_taskComplete(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -129,7 +129,7 @@ export async function POST_taskComplete(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.accessToken}`,
+        'Authorization': `Bearer ${(session as any).accessToken}`,
       },
       body: JSON.stringify({ result }),
     });
@@ -149,7 +149,7 @@ export async function POST_taskComplete(request: NextRequest) {
 export async function GET_reports(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -157,7 +157,7 @@ export async function GET_reports(request: NextRequest) {
     const params = Object.fromEntries(searchParams);
 
     const response = await fetch(`${BACKEND_URL}/reports/overview?${new URLSearchParams(params)}`, {
-      headers: { 'Authorization': `Bearer ${session.accessToken}` },
+      headers: { 'Authorization': `Bearer ${(session as any).accessToken}` },
     });
 
     const data = await response.json();
@@ -171,7 +171,7 @@ export async function GET_reports(request: NextRequest) {
 export async function GET_reportsOtif(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -179,7 +179,7 @@ export async function GET_reportsOtif(request: NextRequest) {
     const params = Object.fromEntries(searchParams);
 
     const response = await fetch(`${BACKEND_URL}/reports/otif?${new URLSearchParams(params)}`, {
-      headers: { 'Authorization': `Bearer ${session.accessToken}` },
+      headers: { 'Authorization': `Bearer ${(session as any).accessToken}` },
     });
 
     const data = await response.json();
@@ -197,7 +197,7 @@ export async function GET_reportsOtif(request: NextRequest) {
 export async function GET_performanceScorecard(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -209,7 +209,7 @@ export async function GET_performanceScorecard(request: NextRequest) {
     const response = await fetch(
       `${BACKEND_URL}/performance/scorecard/${userId}?month=${month}&year=${year}`,
       {
-        headers: { 'Authorization': `Bearer ${session.accessToken}` },
+        headers: { 'Authorization': `Bearer ${(session as any).accessToken}` },
       }
     );
 
@@ -224,7 +224,7 @@ export async function GET_performanceScorecard(request: NextRequest) {
 export async function GET_performanceLeaderboard(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -232,7 +232,7 @@ export async function GET_performanceLeaderboard(request: NextRequest) {
     const period = searchParams.get('period') || 'week';
 
     const response = await fetch(`${BACKEND_URL}/performance/leaderboard?period=${period}`, {
-      headers: { 'Authorization': `Bearer ${session.accessToken}` },
+      headers: { 'Authorization': `Bearer ${(session as any).accessToken}` },
     });
 
     const data = await response.json();
@@ -250,7 +250,7 @@ export async function GET_performanceLeaderboard(request: NextRequest) {
 export async function GET_notifications(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -258,7 +258,7 @@ export async function GET_notifications(request: NextRequest) {
     const limit = searchParams.get('limit') || '20';
 
     const response = await fetch(`${BACKEND_URL}/notifications?limit=${limit}`, {
-      headers: { 'Authorization': `Bearer ${session.accessToken}` },
+      headers: { 'Authorization': `Bearer ${(session as any).accessToken}` },
     });
 
     const data = await response.json();
@@ -276,12 +276,12 @@ export async function GET_notifications(request: NextRequest) {
 export async function GET_users(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const response = await fetch(`${BACKEND_URL}/users`, {
-      headers: { 'Authorization': `Bearer ${session.accessToken}` },
+      headers: { 'Authorization': `Bearer ${(session as any).accessToken}` },
     });
 
     const data = await response.json();
@@ -295,12 +295,12 @@ export async function GET_users(request: NextRequest) {
 export async function GET_coordinators(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!(session as any)?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const response = await fetch(`${BACKEND_URL}/users/coordinators`, {
-      headers: { 'Authorization': `Bearer ${session.accessToken}` },
+      headers: { 'Authorization': `Bearer ${(session as any).accessToken}` },
     });
 
     const data = await response.json();
