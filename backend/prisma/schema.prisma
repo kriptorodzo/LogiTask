@@ -219,6 +219,11 @@ model EmailCase {
   id                   String    @id @default(uuid())
   emailId              String    @unique
   email                Email     @relation(fields: [emailId], references: [id])
+  
+  // Link to Master Inbox (NEW!)
+  inboundItemId        String?
+  inboundItem          InboundItem? @relation(fields: [inboundItemId], references: [id])
+  
   caseStatus           String    @default("NEW") // NEW, PROPOSED, APPROVED, IN_PROGRESS, DONE, PARTIAL, FAILED, CANCELLED
   classification       String? // INBOUND_RECEIPT, OUTBOUND_DELIVERY, DISTRIBUTION, OTHER
   priority             String? // HIGH, MEDIUM, LOW
@@ -247,6 +252,7 @@ model EmailCase {
   @@index([supplierName])
   @@index([locationName])
   @@index([isOtif])
+  @@index([inboundItemId])
 }
 
 model TaskStatusHistory {

@@ -60,8 +60,22 @@ async function validateInboundIntegration() {
     console.log(`   ✅ All tasks have at least one source link`);
   }
 
-  // 4. Check InboundItem processing status
-  console.log('\n📊 4. InboundItem Status Distribution:');
+  // 4. Check for Cases without InboundItem (NEW)
+  console.log('\n📂 4. Cases without InboundItem:');
+  const casesWithoutInbound = await prisma.emailCase.findMany({
+    where: { inboundItemId: null },
+    select: { id: true, caseStatus: true },
+  });
+  
+  if (casesWithoutInbound.length > 0) {
+    console.log(`   ⚠️ Found ${casesWithoutInbound.length} cases without InboundItem`);
+    warnings += casesWithoutInbound.length;
+  } else {
+    console.log(`   ✅ All cases have InboundItem`);
+  }
+
+  // 5. Check InboundItem processing status
+  console.log('\n📊 5. InboundItem Status Distribution:');
   const inboundStats = await prisma.inboundItem.groupBy({
     by: ['processingStatus'],
     _count: true,
@@ -71,8 +85,8 @@ async function validateInboundIntegration() {
     console.log(`   - ${stat.processingStatus}: ${stat._count}`);
   }
 
-  // 5. Check source type distribution
-  console.log('\n📊 5. Source Type Distribution:');
+  // 6. Check source type distribution
+  console.log('\n📊 6. Source Type Distribution:');
   const sourceStats = await prisma.inboundItem.groupBy({
     by: ['sourceType'],
     _count: true,
@@ -82,8 +96,8 @@ async function validateInboundIntegration() {
     console.log(`   - ${stat.sourceType}: ${stat._count}`);
   }
 
-  // 6. Check for InboundItems without sourceId
-  console.log('\n🔗 6. InboundItems without sourceId:');
+  // 7. Check for InboundItems without sourceId
+  console.log('\n🔗 7. InboundItems without sourceId:');
   const inboundWithoutSource = await prisma.inboundItem.findMany({
     where: { sourceId: null },
     select: { id: true, subject: true, sourceType: true },

@@ -9,6 +9,7 @@ import { NotificationModule } from './notification/notification.module';
 import { ReportsModule } from './reports/reports.module';
 import { ErpModule } from './erp/erp.module';
 import { PerformanceModule } from './performance/performance.module';
+import { InboundModule } from './inbound/inbound.module';
 import { HealthController } from './common/health.controller';
 
 @Module({
@@ -26,6 +27,7 @@ import { HealthController } from './common/health.controller';
     ReportsModule,
     ErpModule,
     PerformanceModule,
+    InboundModule,
   ],
   controllers: [HealthController],
 })

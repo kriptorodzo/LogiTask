@@ -458,6 +458,7 @@ async function createEmailScenario(
       data: {
         id: uuid(),
         emailId: email.id,
+        inboundItemId: inboundItem.id,  // Link to Master Inbox
         caseStatus,
         classification: scenario.requestType !== 'UNCLASSIFIED' ? scenario.requestType : null,
         priority: scenario.overdue ? 'HIGH' : 'MEDIUM',
