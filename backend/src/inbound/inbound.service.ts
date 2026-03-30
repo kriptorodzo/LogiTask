@@ -1,6 +1,39 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+/**
+ * ╔══════════════════════════════════════════════════════════════════════════════════╗
+ * ║                        CANONICAL WORKFLOW DEFINITION                              ║
+ * ╠══════════════════════════════════════════════════════════════════════════════════╣
+ * ║                                                                                  ║
+ * ║  PRIMARY PATH (Recommended):                                                     ║
+ * ║  ─────────────────────────────────                                                 ║
+ * ║  InboundItem → EmailCase → Task                                                  ║
+ * ║                                                                                  ║
+ * ║  1. INBOUND ITEM arrives (from Email, ERP, or Manual)                            ║
+ * ║  2. Manager reviews and CLASSIFIES (sets requestType, priority, supplier, etc) ║
+ * ║  3. processInboundItem() creates:                                                ║
+ * ║     - EmailCase (linked to inboundItemId, not emailId)                          ║
+ * ║     - Task (linked to inboundItemId)                                             ║
+ * ║  4. Coordinator works on Task                                                     ║
+ * ║  5. Task completion updates Case status                                         ║
+ * ║                                                                                  ║
+ * ║  LEGACY PATH (Transitional - for backward compatibility only):                   ║
+ * ║  ─────────────────────────────────────────────                                    ║
+ * ║  Email → EmailCase → Task (via email.service classifyEmail)                     ║
+ * ║                                                                                  ║
+ * ║  This path is DEPRECATED. Only use for existing emails that haven't been        ║
+ * ║  migrated to the InboundItem workflow.                                           ║
+ * ║                                                                                  ║
+ * ║  KEY RELATIONSHIPS:                                                               ║
+ * ║  ───────────────────                                                              ║
+ * ║  - EmailCase: uses inboundItemId (preferred) OR emailId (legacy)                ║
+ * ║  - Task: uses inboundItemId (preferred) OR emailId (legacy)                     ║
+ * ║  - InboundItem: can have multiple Tasks and one Case                            ║
+ * ║                                                                                  ║
+ * ╚══════════════════════════════════════════════════════════════════════════════════╝
+ */
+
 @Injectable()
 export class InboundService {
   constructor(private prisma: PrismaService) {}
