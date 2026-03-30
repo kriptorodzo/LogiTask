@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { taskApi } from '@/lib/api';
 import { Task, TASK_STATUS } from '@/types';
 import PageShell from '@/components/PageShell';
+import { useStatePersistence, useDebounce } from '@/lib/useStatePersistence';
 
 type Tab = 'my' | 'in_progress' | 'done' | 'overdue';
 
@@ -15,6 +16,28 @@ export default function CoordinatorPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('my');
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  
+  // State persistence
+  const { loadState, saveState, clearState } = useStatePersistence('coordinator', {
+    activeTab: 'my',
+    search: '',
+  });
+
+  useEffect(() => {
+    const saved = loadState();
+    if (saved.activeTab) setActiveTab(saved.activeTab as Tab);
+    if (saved.search) setSearchQuery(saved.search);
+  }, []);
+
+  useEffect(() => {
+    saveState({ activeTab, search: searchQuery });
+  }, [activeTab, searchQuery]);
+
+  useEffect(() => {
+    return () => clearState();
+  }, []);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const userRole = (session?.user as any)?.role || 'RECEPTION_COORDINATOR';

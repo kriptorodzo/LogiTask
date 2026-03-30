@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { emailApi, taskApi, userApi } from '@/lib/api';
 import { Email, Task, User } from '@/types';
 import PageShell from '@/components/PageShell';
+import { useStatePersistence, useDebounce } from '@/lib/useStatePersistence';
 
 type TabType = 'new' | 'pending' | 'delegated' | 'problematic' | 'overdue';
 
@@ -17,6 +18,31 @@ export default function ManagerInboxPage() {
   const [coordinators, setCoordinators] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('pending');
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  
+  // State persistence
+  const { loadState, saveState, clearState } = useStatePersistence('manager', {
+    activeTab: 'pending',
+    search: '',
+  });
+
+  // Restore state on mount (back navigation)
+  useEffect(() => {
+    const saved = loadState();
+    if (saved.activeTab) setActiveTab(saved.activeTab as TabType);
+    if (saved.search) setSearchQuery(saved.search);
+  }, []);
+
+  // Save state when it changes
+  useEffect(() => {
+    saveState({ activeTab, search: searchQuery });
+  }, [activeTab, searchQuery]);
+
+  // Clear state on unmount
+  useEffect(() => {
+    return () => clearState();
+  }, []);
 
   const userRole = (session?.user as any)?.role;
   const isManager = userRole === 'MANAGER';
@@ -211,6 +237,23 @@ export default function ManagerInboxPage() {
   return (
     <PageShell title="Manager Inbox" subtitle="Review and approve tasks">
       <div className="p-6">
+        {/* Search */}
+        <div style={{ marginBottom: '16px' }}>
+          <input
+            type="text"
+            placeholder="Пребарувај email адреса, предмет, добавувач..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+              fontSize: '14px'
+            }}
+          />
+        </div>
+        
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
           {(['new', 'pending', 'delegated', 'problematic', 'overdue'] as TabType[]).map(tab => (
             <button

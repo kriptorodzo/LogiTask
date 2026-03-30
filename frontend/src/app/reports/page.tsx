@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { reportsApi } from '@/lib/api';
 import Link from 'next/link';
 import PageShell from '@/components/PageShell';
+import { useStatePersistence, useDebounce } from '@/lib/useStatePersistence';
 
 interface OverviewMetrics {
   totalCases: number;

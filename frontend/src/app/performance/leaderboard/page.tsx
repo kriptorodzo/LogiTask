@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useStatePersistence } from '@/lib/useStatePersistence';
 import { performanceApi } from '@/lib/api';
 import PageShell from '@/components/PageShell';
 
@@ -34,6 +35,28 @@ export default function LeaderboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedRole, setSelectedRole] = useState('');
+
+  // State persistence
+  const { loadState, saveState, clearState } = useStatePersistence('performance-leaderboard', {
+    selectedMonth: new Date().getMonth() + 1,
+    selectedYear: new Date().getFullYear(),
+    selectedRole: '',
+  });
+
+  useEffect(() => {
+    const saved = loadState();
+    if (saved.selectedMonth) setSelectedMonth(saved.selectedMonth as number);
+    if (saved.selectedYear) setSelectedYear(saved.selectedYear as number);
+    if (saved.selectedRole) setSelectedRole(saved.selectedRole as string);
+  }, []);
+
+  useEffect(() => {
+    saveState({ selectedMonth, selectedYear, selectedRole });
+  }, [selectedMonth, selectedYear, selectedRole]);
+
+  useEffect(() => {
+    return () => clearState();
+  }, []);
 
   useEffect(() => {
     loadLeaderboard();
