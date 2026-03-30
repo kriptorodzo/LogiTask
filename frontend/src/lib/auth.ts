@@ -7,7 +7,10 @@ const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
 
 // Production/Pilot: MUST use Azure AD auth - no dev fallback allowed
 // Only activates when BOTH NODE_ENV=production AND (no AUTH_MODE or AUTH_MODE=production)
-const isProductionMode = process.env.NODE_ENV === 'production' && 
+// AND we're not in build time (BUILD_TIME env prevents check during next build)
+const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
+const isProductionMode = !isBuildTime && 
+  process.env.NODE_ENV === 'production' && 
   (!process.env.AUTH_MODE || process.env.AUTH_MODE === 'production');
 
 // In PRODUCTION mode: Azure AD MUST be configured with real values

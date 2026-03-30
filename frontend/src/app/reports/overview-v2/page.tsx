@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { reportsApi } from '@/lib/api';
-import Header from '@/components/Header';
+import PageShell from '@/components/PageShell';
 
 type CaseStatus = 'NEW' | 'PROPOSED' | 'APPROVED' | 'IN_PROGRESS' | 'DONE' | 'PARTIAL' | 'FAILED' | 'CANCELLED';
 
@@ -370,36 +370,29 @@ export default function ReportsOverviewV2Page() {
 
   if (loading) {
     return (
-      <div>
-        <Header isManager={true} />
-        <div className="container">
-          <div className="empty-state">
-            <h3>Loading...</h3>
-          </div>
+      <PageShell title="Reports Overview" subtitle="Loading...">
+        <div className="p-6">
+          <div className="text-center">Loading...</div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (!overview) {
     return (
-      <div>
-        <Header isManager={true} />
-        <div className="container">
-          <div className="empty-state">
-            <h3>No data available</h3>
-          </div>
+      <PageShell title="Reports Overview" subtitle="No data">
+        <div className="p-6">
+          <div className="text-center">No data available</div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div>
-      <Header isManager={true} />
+    <PageShell title="Reports Overview" subtitle="Operational analytics">
       <div className="container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h1>📊 Reports Overview v2</h1>
+          <div></div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <input
               type="date"
@@ -615,6 +608,6 @@ export default function ReportsOverviewV2Page() {
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

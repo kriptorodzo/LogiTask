@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useStatePersistence } from '@/lib/useStatePersistence';
 import { performanceApi } from '@/lib/api';
+import PageShell from '@/components/PageShell';
 
 interface LeaderboardEntry {
   rank: number;
@@ -33,6 +35,28 @@ export default function LeaderboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedRole, setSelectedRole] = useState('');
+
+  // State persistence
+  const { loadState, saveState, clearState } = useStatePersistence('performance-leaderboard', {
+    selectedMonth: new Date().getMonth() + 1,
+    selectedYear: new Date().getFullYear(),
+    selectedRole: '',
+  });
+
+  useEffect(() => {
+    const saved = loadState();
+    if (saved.selectedMonth) setSelectedMonth(saved.selectedMonth as number);
+    if (saved.selectedYear) setSelectedYear(saved.selectedYear as number);
+    if (saved.selectedRole) setSelectedRole(saved.selectedRole as string);
+  }, []);
+
+  useEffect(() => {
+    saveState({ selectedMonth, selectedYear, selectedRole });
+  }, [selectedMonth, selectedYear, selectedRole]);
+
+  useEffect(() => {
+    return () => {};
+  }, []);
 
   useEffect(() => {
     loadLeaderboard();
@@ -117,11 +141,12 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Листа на перформанси</h1>
-        <div className="flex gap-2 items-center">
+    <PageShell title="Performance Leaderboard" subtitle="Monthly coordinator rankings by OTIF score">
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">Листа на перформанси</h2>
+          <div className="flex gap-2 items-center">
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
@@ -219,6 +244,7 @@ export default function LeaderboardPage() {
           <span className="text-xl">🥉</span> <span>Трето место</span>
         </div>
       </div>
-    </div>
+      </div>
+    </PageShell>
   );
 }

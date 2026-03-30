@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import PageShell from '@/components/PageShell';
 
 interface RoutePlan {
   id: string;
@@ -131,32 +132,30 @@ export default function RoutePlansPage() {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '24px'
-      }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>Route Plans</h1>
-          <p style={{ color: '#666' }}>Manage distribution routes and delivery schedules</p>
-        </div>
-        <button
-          onClick={() => {
-            setFormData({
-              destinationCode: '',
-              destinationName: '',
-              routeDay: 'FRIDAY',
-              prepOffsetDays: 1,
-              active: true,
-            });
-            setEditingId(null);
-            setShowForm(true);
-          }}
-          style={{
-            padding: '12px 24px',
-            border: 'none',
+    <PageShell title="Route Plans" subtitle="Manage distribution routes">
+      <div style={{ padding: '24px' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '24px'
+        }}>
+          <div></div>
+          <button
+            onClick={() => {
+              setFormData({
+                destinationCode: '',
+                destinationName: '',
+                routeDay: 'FRIDAY',
+                prepOffsetDays: 1,
+                active: true,
+              });
+              setEditingId(null);
+              setShowForm(true);
+            }}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
             background: '#1976d2',
             color: 'white',
             borderRadius: '4px',
@@ -229,7 +228,6 @@ export default function RoutePlansPage() {
                       onClick={() => handleToggleActive(plan)}
                       style={{
                         padding: '4px 12px',
-                        border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         background: plan.active ? '#e8f5e9' : '#fafafa',
@@ -434,7 +432,7 @@ export default function RoutePlansPage() {
         </div>
       )}
 
-      {/* Info Box */}
+      {/* Info Box - improved for business user */}
       <div style={{
         marginTop: '32px',
         padding: '20px',
@@ -442,19 +440,20 @@ export default function RoutePlansPage() {
         borderRadius: '8px',
         borderLeft: '4px solid #1976d2',
       }}>
-        <h3 style={{ marginBottom: '12px', fontWeight: 'bold' }}>How Route Plans Work</h3>
-        <ul style={{ margin: 0, paddingLeft: '20px', color: '#333' }}>
+        <h3 style={{ marginBottom: '12px', fontWeight: 'bold', color: '#1565c0' }}>💡 Како работат плановите за рути</h3>
+        <ul style={{ margin: 0, paddingLeft: '20px', color: '#333', lineHeight: '1.8' }}>
           <li style={{ marginBottom: '8px' }}>
-            <strong>Route Day:</strong> The day when distribution tasks are due
+            <strong>Ден на испорака (Route Day):</strong> Денот кога треба да се изврши испораката
           </li>
           <li style={{ marginBottom: '8px' }}>
-            <strong>Prep Offset:</strong> Days before route when preparation tasks become due
+            <strong>Подготовка предходно (Prep Offset):</strong> Колку дена ПРЕД денот на испорака треба да заврши подготовката
           </li>
           <li style={{ marginBottom: '8px' }}>
-            <strong>Example:</strong> If route is Friday with 1-day prep offset, "Подготви" tasks are due Thursday
+            <strong>Пример:</strong> Ако рутата е Петок со 1 ден подготовка → задачите за Подготовка се должни во Четврток
           </li>
         </ul>
       </div>
     </div>
+    </PageShell>
   );
 }

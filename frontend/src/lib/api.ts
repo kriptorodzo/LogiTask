@@ -302,4 +302,39 @@ export const performanceApi = {
   },
 };
 
+// Inbound API (Master Inbox)
+export const inboundApi = {
+  getAll: async (params?: { 
+    sourceType?: string; 
+    processingStatus?: string; 
+    requestType?: string;
+    priority?: string;
+  }) => {
+    const { data } = await apiClient.get('/inbound', { params });
+    return data;
+  },
+  getById: async (id: string) => {
+    const { data } = await apiClient.get(`/inbound/${id}`);
+    return data;
+  },
+  getSummary: async () => {
+    const { data } = await apiClient.get('/inbound/summary');
+    return data;
+  },
+  getCoordinatorSummary: async (userId: string) => {
+    const { data } = await apiClient.get(`/inbound/coordinator/${userId}`);
+    return data;
+  },
+  process: async (id: string, data: {
+    requestType?: string;
+    priority?: string;
+    supplierName?: string;
+    locationName?: string;
+    dueDate?: string;
+  }) => {
+    const { data: result } = await apiClient.patch(`/inbound/${id}/process`, data);
+    return result;
+  },
+};
+
 export default apiClient;

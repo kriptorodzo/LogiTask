@@ -17,14 +17,43 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ""
-echo "[2/4] Running Prisma migrations..."
+echo "[2/4] Running Prisma setup..."
 cd "$PROJECT_DIR/backend"
+
+# Remove old migrations folder completely if exists (for clean SQLite setup)
+if [ -d "migrations" ]; then
+    echo "Removing old migrations folder..."
+    rm -rf migrations
+fi
+
+# Recreate migration_lock.toml with sqlite (Prisma needs this)
+echo 'provider = "sqlite"' > migration_lock.toml
+
+# Create .env file with default SQLite if not exists
+if [ ! -f .env ]; then
+    echo "Creating .env file with SQLite configuration..."
+    cat > .env << 'EOF'
+DATABASE_URL=file:./dev.db
+AUTH_MODE=development
+NODE_ENV=development
+EOF
+fi
+
+# Delete existing dev.db for clean setup
+if [ -f "dev.db" ]; then
+    rm -f dev.db
+fi
+
+# Use prisma db push instead of migrate dev (faster for local dev)
 export DATABASE_URL="file:./dev.db"
-npx prisma migrate dev
+echo "Using DATABASE_URL: $DATABASE_URL"
+
+npx prisma db push --force-reset
 
 echo ""
 echo "[3/4] Seeding database..."
 cd "$PROJECT_DIR/backend"
+export DATABASE_URL="file:./dev.db"
 npm run prisma:seed
 
 echo ""

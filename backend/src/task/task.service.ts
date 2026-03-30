@@ -37,7 +37,9 @@ export class TaskService {
   }
 
   async createTask(data: {
-    emailId: string;
+    emailId?: string;
+    erpDocumentId?: string;
+    inboundItemId?: string;  // NEW: Link to Master Inbox
     title: string;
     description?: string;
     requestType: string;
@@ -47,6 +49,8 @@ export class TaskService {
     const task = await this.prisma.task.create({
       data: {
         emailId: data.emailId,
+        erpDocumentId: data.erpDocumentId,
+        inboundItemId: data.inboundItemId,  // NEW
         title: data.title,
         description: data.description,
         requestType: data.requestType,
@@ -56,6 +60,14 @@ export class TaskService {
       },
       include: { email: true, assignee: true },
     });
+
+    // Update InboundItem tasksGenerated count
+    if (data.inboundItemId) {
+      await this.prisma.inboundItem.update({
+        where: { id: data.inboundItemId },
+        data: { tasksGenerated: { increment: 1 } },
+      }).catch(console.error);
+    }
 
     // Trigger case status recalculation when task is created
     if (task.emailId) {

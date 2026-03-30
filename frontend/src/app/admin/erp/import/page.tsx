@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import PageShell from '@/components/PageShell';
 
 interface ErpDocumentRow {
   documentType: string;
@@ -219,14 +220,14 @@ export default function ErpImportPage() {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>ERP Import</h1>
-        <p style={{ color: '#666' }}>Import ERP documents and create tasks automatically</p>
-      </div>
+    <PageShell title="ERP Import" subtitle="Import documents and create tasks">
+      <div style={{ padding: '24px' }}>
+        <div style={{ marginBottom: '24px' }}>
+          <div></div>
+        </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid #e0e0e0' }}>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid #e0e0e0' }}>
         {(['upload', 'preview', 'results'] as const).map(tab => (
           <button
             key={tab}
@@ -248,11 +249,80 @@ export default function ErpImportPage() {
 
       {/* Upload Tab */}
       {activeTab === 'upload' && (
-        <div style={{ display: 'flex', gap: '24px' }}>
+        <div style={{ display: 'flex', gap: '24px', flexDirection: 'column' }}>
+          
+          {/* Help Box with Template */}
+          <div style={{ 
+            padding: '20px', 
+            background: '#e3f2fd', 
+            borderRadius: '12px',
+            border: '1px solid #1976d2'
+          }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '16px', color: '#1565c0' }}>
+              📥 Како да подготвите податоци за import
+            </h3>
+            <p style={{ margin: '0 0 16px', color: '#333', fontSize: '14px' }}>
+              Превземете го CSV шаблонот, пополнете ги податоците и качете го фајлот.
+            </p>
+            
+            {/* Download Template Button */}
+            <button
+              onClick={() => {
+                const csvContent = `documentType,documentNumber,partnerName,destinationName,lineCount,totalQuantity,plannedDate
+PURCHASE_ORDER,PO-001,Добавувач А,Битола,10,100,2026-04-15
+GOODS_RECEIPT,GR-001,Добавувач Б,Скопје,5,50,2026-04-16
+SALES_ORDER,SO-001,Купувач В,Охрид,20,200,2026-04-17
+SHIPMENT_ORDER,SHIP-001,Купувач Г,Прилеп,15,150,2026-04-18`;
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'erp_import_template.csv';
+                a.click();
+              }}
+              style={{
+                padding: '12px 24px',
+                background: '#1976d2',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '14px',
+              }}
+            >
+              📥 Превземи CSV template
+            </button>
+            
+            {/* Document Types Explanation */}
+            <div style={{ marginTop: '20px' }}>
+              <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: '#1565c0' }}>Типови на документи:</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div style={{ padding: '12px', background: 'white', borderRadius: '8px' }}>
+                  <strong style={{ color: '#1976d2' }}>PURCHASE_ORDER</strong>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>Нарачка за набавка</p>
+                </div>
+                <div style={{ padding: '12px', background: 'white', borderRadius: '8px' }}>
+                  <strong style={{ color: '#1976d2' }}>GOODS_RECEIPT</strong>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>Прием на стока</p>
+                </div>
+                <div style={{ padding: '12px', background: 'white', borderRadius: '8px' }}>
+                  <strong style={{ color: '#1976d2' }}>SALES_ORDER</strong>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>Нарачка за продажба</p>
+                </div>
+                <div style={{ padding: '12px', background: 'white', borderRadius: '8px' }}>
+                  <strong style={{ color: '#1976d2' }}>SHIPMENT_ORDER</strong>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>Испратница/испорака</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '24px' }}>
           {/* File Upload */}
           <div style={{ flex: 1, padding: '24px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>Upload File</h2>
-            <p style={{ color: '#666', marginBottom: '16px' }}>Supports CSV or JSON format</p>
+            <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>Качи фајл</h2>
+            <p style={{ color: '#666', marginBottom: '16px' }}>Поддржува CSV формат</p>
             
             <input
               type="file"
@@ -273,12 +343,17 @@ export default function ErpImportPage() {
             )}
           </div>
 
-          {/* JSON Paste */}
-          <div style={{ flex: 1, padding: '24px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>Or Paste JSON</h2>
-            <p style={{ color: '#666', marginBottom: '16px' }}>Paste JSON array of documents</p>
-            
-            <textarea
+          {/* JSON Paste - Hidden for simplicity, collapsed by default */}
+          <details style={{ flex: 1, padding: '16px', border: '1px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer' }}>
+            <summary style={{ fontSize: '16px', fontWeight: 'bold', color: '#666', cursor: 'pointer' }}>
+              ▼ Или залепи JSON (опционално)
+            </summary>
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ color: '#666', marginBottom: '16px', fontSize: '13px' }}>
+                За напредни корисници - можете да залепите JSON низводно.
+              </p>
+              
+              <textarea
               onChange={handleJSONPaste}
               placeholder={`[
   {
@@ -535,5 +610,6 @@ export default function ErpImportPage() {
         </div>
       )}
     </div>
+    </PageShell>
   );
 }

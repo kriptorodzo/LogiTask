@@ -159,6 +159,37 @@ export class ErpImportService {
       },
     });
 
+    // Step 1: Create InboundItem (Master Inbox)
+    const sourceSubType = docType === 'PURCHASE_ORDER' ? 'ERP_PO' 
+      : docType === 'GOODS_RECEIPT' ? 'ERP_GR'
+      : docType === 'SALES_ORDER' ? 'ERP_SO'
+      : 'ERP_SHIPMENT';
+
+    const inboundItem = await this.prisma.inboundItem.create({
+      data: {
+        sourceType: 'ERP',
+        sourceSubType,
+        sourceId: erpDocument.id,
+        sourceData: JSON.stringify(row),
+        subject: `${docType}: ${row.documentNumber}`,
+        supplierName: row.partnerName,
+        locationName: row.destinationName,
+        referenceNumber: row.documentNumber,
+        requestedDate: plannedDate,
+        priority: 'MEDIUM',
+        requestType: this.mapDocumentTypeToRequestType(docType),
+        processingStatus: 'RECLAIMED',
+        receivedAt: new Date(),
+        ingestedAt: new Date(),
+      },
+    });
+
+    // Link ErpDocument to InboundItem
+    await this.prisma.erpDocument.update({
+      where: { id: erpDocument.id },
+      data: { inboundItemId: inboundItem.id },
+    });
+
     const result = await this.createErpTasks(erpDocument, row.relatedDocumentNumber);
 
     return {
@@ -194,7 +225,34 @@ export class ErpImportService {
       where: { documentNumber: data.documentNumber },
     });
 
+    // If new document, create with InboundItem
     if (!erpDocument) {
+      // Step 1: Create InboundItem
+      const sourceSubType = docType === 'PURCHASE_ORDER' ? 'ERP_PO' 
+        : docType === 'GOODS_RECEIPT' ? 'ERP_GR'
+        : docType === 'SALES_ORDER' ? 'ERP_SO'
+        : 'ERP_EVENT';
+
+      const inboundItem = await this.prisma.inboundItem.create({
+        data: {
+          sourceType: 'ERP',
+          sourceSubType,
+          sourceId: null, // Will be updated after doc creation
+          sourceData: JSON.stringify(data),
+          subject: `${docType}: ${data.documentNumber}`,
+          supplierName: data.partnerName,
+          locationName: data.destinationName,
+          referenceNumber: data.documentNumber,
+          requestedDate: plannedDate,
+          priority: 'MEDIUM',
+          requestType: this.mapDocumentTypeToRequestType(docType),
+          processingStatus: 'RECLAIMED',
+          receivedAt: new Date(),
+          ingestedAt: new Date(),
+        },
+      });
+
+      // Step 2: Create ErpDocument with link
       erpDocument = await this.prisma.erpDocument.create({
         data: {
           batchId: null,
@@ -208,7 +266,14 @@ export class ErpImportService {
           lineCount: data.lineCount || 0,
           totalQuantity: data.totalQuantity || 0,
           plannedDate,
+          inboundItemId: inboundItem.id,
         } as any,
+      });
+
+      // Update InboundItem with source ID
+      await this.prisma.inboundItem.update({
+        where: { id: inboundItem.id },
+        data: { sourceId: erpDocument.id },
       });
     }
 
@@ -314,6 +379,7 @@ export class ErpImportService {
           assigneeId: assignee?.id,
           dueDate,
           erpDocumentId: erpDocument.id,
+          inboundItemId: erpDocument.inboundItemId, // Link to InboundItem
           assignedAt: new Date(),
         },
       });
@@ -358,6 +424,16 @@ export class ErpImportService {
     };
 
     return typeMap[normalized] || null;
+  }
+
+  private mapDocumentTypeToRequestType(docType: string): string {
+    const map: Record<string, string> = {
+      'PURCHASE_ORDER': 'INBOUND_RECEIPT',
+      'GOODS_RECEIPT': 'INBOUND_RECEIPT',
+      'SALES_ORDER': 'OUTBOUND_PREPARATION',
+      'SHIPMENT_ORDER': 'TRANSFER_DISTRIBUTION',
+    };
+    return map[docType] || 'INBOUND_RECEIPT';
   }
 
   async getBatchStatus(batchId: string) {

@@ -1,0 +1,17 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./
+RUN npm install
+
+# Copy source
+COPY frontend/src ./src
+COPY frontend/next.config.js ./
+COPY frontend/tsconfig.json ./
+COPY frontend/next-env.d.ts ./
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]

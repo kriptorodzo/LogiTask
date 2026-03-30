@@ -35,6 +35,7 @@ export class CaseAggregationService {
 
   /**
    * Create a new EmailCase for an email when it's processed
+   * Now links to InboundItem for full traceability
    */
   async createCaseForEmail(emailId: string, data?: {
     classification?: string;
@@ -43,19 +44,24 @@ export class CaseAggregationService {
     locationName?: string;
     deliveryDueAt?: Date;
     caseDueAt?: Date;
+    inboundItemId?: string;  // NEW: Link to InboundItem
   }): Promise<any> {
     const email = await this.prisma.email.findUnique({
       where: { id: emailId },
-      include: { tasks: true },
+      include: { tasks: true, inboundItem: true },
     });
 
     if (!email) {
       throw new Error('Email not found');
     }
 
+    // Use inboundItem from email if not provided
+    const inboundItemId = data?.inboundItemId || email.inboundItemId;
+
     return this.prisma.emailCase.create({
       data: {
         emailId,
+        inboundItemId,  // Link to Master Inbox
         classification: data?.classification || email.requestType || 'OTHER',
         priority: data?.priority || email.extractedUrgency || 'MEDIUM',
         supplierName: data?.supplierName || email.extractedSupplier,
@@ -63,7 +69,7 @@ export class CaseAggregationService {
         deliveryDueAt: data?.deliveryDueAt || email.extractedDeliveryDate,
         caseDueAt: data?.caseDueAt || email.extractedDeliveryDate,
       },
-      include: { email: true },
+      include: { email: true, inboundItem: true },
     });
   }
 
@@ -242,6 +248,10 @@ export class CaseAggregationService {
       throw new Error('Case not found');
     }
 
+    if (!emailCase.email) {
+      throw new Error('Case has no linked email');
+    }
+
     const allTasks = emailCase.email.tasks;
     const tasks = allTasks.filter(t => t.isRequiredForCase !== false);
     const requiredTasks = tasks; // All non-excluded tasks are required
@@ -286,10 +296,10 @@ export class CaseAggregationService {
       .filter(h => h.toStatus === 'APPROVED')
       .sort((a, b) => a.changedAt.getTime() - b.changedAt.getTime());
 
-    if (approvalHistory.length > 0 && emailCase.email.receivedAt) {
+    if (approvalHistory.length > 0 && emailCase.email?.receivedAt) {
       const firstApproval = approvalHistory[0];
       approvalLeadMinutes = Math.round(
-        (firstApproval.changedAt.getTime() - emailCase.email.receivedAt.getTime()) / 60000
+        (firstApproval.changedAt.getTime() - emailCase.email!.receivedAt.getTime()) / 60000
       );
     }
 

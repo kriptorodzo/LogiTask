@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { reportsApi } from '@/lib/api';
 import Link from 'next/link';
+import PageShell from '@/components/PageShell';
+import { useStatePersistence, useDebounce } from '@/lib/useStatePersistence';
 
 interface OverviewMetrics {
   totalCases: number;
@@ -114,37 +116,31 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Reports & OTIF Dashboard</h1>
-        <div className="flex gap-2">
-          <input
-            type="date"
-            value={dateRange.from}
-            onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-            className="px-3 py-2 border rounded"
-          />
-          <span className="self-center">to</span>
-          <input
-            type="date"
-            value={dateRange.to}
-            onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-            className="px-3 py-2 border rounded"
-          />
-          <button
-            onClick={() => setDateRange({ from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] })}
-            className="px-3 py-2 text-gray-600 hover:text-gray-800"
-          >
-            Reset
-          </button>
-          <Link
-            href="/reports/scorecard"
-            className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            My Scorecard
-          </Link>
+    <PageShell title="Reports & OTIF" subtitle="Operational performance metrics">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={dateRange.from}
+              onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
+              className="px-3 py-2 border rounded"
+            />
+            <span className="self-center">to</span>
+            <input
+              type="date"
+              value={dateRange.to}
+              onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
+              className="px-3 py-2 border rounded"
+            />
+            <button
+              onClick={() => setDateRange({ from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] })}
+              className="px-3 py-2 text-gray-600 hover:text-gray-800"
+            >
+              Reset
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-4 mb-8">
@@ -196,37 +192,46 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* OTIF Trend Chart */}
+      {/* OTIF Trend - Simple Visual Chart */}
       <div className="bg-white p-4 rounded-lg shadow mb-8">
-        <h2 className="text-lg font-semibold mb-4">OTIF Trend</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2">Period</th>
-                <th className="text-right">Total Cases</th>
-                <th className="text-right">OTIF</th>
-                <th className="text-right">On-Time</th>
-                <th className="text-right">In-Full</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trend.slice(-14).map((t) => (
-                <tr key={t.period} className="border-b">
-                  <td className="py-2">{t.period}</td>
-                  <td className="text-right">{t.totalCases}</td>
-                  <td className="text-right font-medium text-green-600">{t.otifRate.toFixed(1)}%</td>
-                  <td className="text-right">{t.onTimeRate.toFixed(1)}%</td>
-                  <td className="text-right">{t.inFullRate.toFixed(1)}%</td>
-                </tr>
-              ))}
-              {trend.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-center py-4 text-gray-400">No data available</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <h2 className="text-lg font-semibold mb-4">📈 OTIF Trend (последни 14 дена)</h2>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', height: '150px', padding: '10px 0' }}>
+          {trend.slice(-14).map((t, i) => {
+            const maxRate = 100;
+            const otifHeight = (t.otifRate / maxRate) * 120;
+            const color = t.otifRate >= 90 ? '#22c55e' : t.otifRate >= 70 ? '#eab308' : '#ef4444';
+            return (
+              <div key={t.period} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ 
+                  width: '100%', 
+                  height: `${otifHeight}px`, 
+                  background: color, 
+                  borderRadius: '4px 4px 0 0',
+                  minHeight: '4px',
+                  transition: 'height 0.3s'
+                }} title={`${t.period}: OTIF ${t.otifRate.toFixed(1)}%`} />
+                <div style={{ fontSize: '10px', color: '#666', marginTop: '4px', textAlign: 'center' }}>
+                  {t.period.slice(0, 5)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Legend */}
+        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '12px', fontSize: '12px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '12px', height: '12px', background: '#22c55e', borderRadius: '2px' }}></span>
+            ≥90% Одлично
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '12px', height: '12px', background: '#eab308', borderRadius: '2px' }}></span>
+            70-89% Добро
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '12px', height: '12px', background: '#ef4444', borderRadius: '2px' }}></span>
+            &lt;70% Треба подобрување
+          </span>
         </div>
       </div>
 
@@ -253,6 +258,7 @@ export default function ReportsPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </PageShell>
   );
 }

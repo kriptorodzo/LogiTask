@@ -110,7 +110,26 @@ export class EmailService {
       plainText,
     );
 
-    // Store email in database
+    // Step 1: Create InboundItem (Master Inbox)
+    const inboundItem = await this.prisma.inboundItem.create({
+      data: {
+        sourceType: 'EMAIL',
+        sourceSubType: 'EMAIL_MICROSOFT',
+        sourceId: graphEmail.id,
+        sourceData: JSON.stringify(graphEmail),
+        subject: graphEmail.subject,
+        supplierName: extracted.supplier,
+        locationName: extracted.location,
+        requestedDate: extracted.deliveryDate,
+        priority: extracted.urgency || 'MEDIUM',
+        requestType: requestType,
+        processingStatus: 'RECLAIMED',
+        receivedAt: new Date(graphEmail.receivedDateTime),
+        ingestedAt: new Date(),
+      },
+    });
+
+    // Step 2: Store email in database with link to InboundItem
     const email = await this.prisma.email.create({
       data: {
         mailboxId,
@@ -127,7 +146,15 @@ export class EmailService {
         extractedDeliveryDate: extracted.deliveryDate,
         extractedUrgency: extracted.urgency,
         requestType,
+        // Link to InboundItem (NEW!)
+        inboundItemId: inboundItem.id,
       },
+    });
+
+    // Update InboundItem with external reference
+    await this.prisma.inboundItem.update({
+      where: { id: inboundItem.id },
+      data: { sourceId: email.id },
     });
 
     return email;
@@ -167,10 +194,22 @@ export class EmailService {
         requestType,
         processingStatus: 'PROCESSED',
       },
+      include: { inboundItem: true },
     });
 
+    // Update InboundItem processing status
+    if (email.inboundItemId) {
+      await this.prisma.inboundItem.update({
+        where: { id: email.inboundItemId },
+        data: { processingStatus: 'PROCESSED' },
+      });
+    }
+
     // Generate tasks based on the request type
-    await this.generateTasksForEmail(email);
+    const tasks = await this.generateTasksForEmail(email);
+
+    // Create case after tasks are generated
+    await this.caseAggregationService.createCaseForEmail(email.id);
 
     // Return the updated email with tasks
     return this.getEmailById(id);
@@ -211,11 +250,12 @@ export class EmailService {
         break;
     }
 
-    // Create tasks in database
+    // Create tasks in database with InboundItem link
     for (const task of tasks) {
       await this.prisma.task.create({
         data: {
           emailId: email.id,
+          inboundItemId: email.inboundItemId,  // Link to Master Inbox
           title: task.title,
           requestType: task.requestType,
           status: 'PROPOSED',
@@ -227,6 +267,8 @@ export class EmailService {
 
     // Trigger case status recalculation after tasks are created
     this.caseAggregationService.recalculateCaseStatus(email.id).catch(console.error);
+    
+    return tasks;
   }
 
   // Webhook endpoint for new email notifications

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { reportsApi } from '@/lib/api';
+import PageShell from '@/components/PageShell';
 
 interface Scorecard {
   coordinatorUserId: string;
@@ -93,10 +94,11 @@ export default function ScorecardPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Performance</h1>
-        <div className="flex gap-2">
+    <PageShell title="My Performance" subtitle="Personal scorecard" showBack backHref="/reports">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div></div>
+          <div className="flex gap-2">
           <input
             type="date"
             value={dateRange.from}
@@ -190,5 +192,6 @@ export default function ScorecardPage() {
         </>
       )}
     </div>
+    </PageShell>
   );
 }
