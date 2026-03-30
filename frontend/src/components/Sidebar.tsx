@@ -10,6 +10,7 @@ const navItems = [
   { href: '/reports', label: 'Reports', icon: '📈' },
   { href: '/performance/leaderboard', label: 'Performance', icon: '🏆' },
   { href: '/admin/erp', label: 'ERP', icon: '🏭' },
+  { href: '/admin/performance', label: 'Settings', icon: '⚙️' },
 ];
 
 export default function Sidebar() {

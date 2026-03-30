@@ -34,19 +34,24 @@ const MODULE_BREADCRUMBS: Record<string, { label: string; href?: string }[]> = {
     { label: 'Overview' },
   ],
   // Admin
+  '/admin': [
+    { label: 'Admin' },
+  ],
   '/admin/erp': [
-    { label: 'Admin', href: '/admin/erp' },
+    { label: 'Admin', href: '/admin' },
     { label: 'ERP' },
   ],
   '/admin/performance': [
-    { label: 'Admin', href: '/admin/erp' },
+    { label: 'Admin', href: '/admin' },
     { label: 'Performance' },
   ],
   '/admin/erp/routes': [
+    { label: 'Admin', href: '/admin' },
     { label: 'ERP', href: '/admin/erp' },
     { label: 'Route Plans' },
   ],
   '/admin/erp/import': [
+    { label: 'Admin', href: '/admin' },
     { label: 'ERP', href: '/admin/erp' },
     { label: 'Import' },
   ],
@@ -58,6 +63,13 @@ const MODULE_BREADCRUMBS: Record<string, { label: string; href?: string }[]> = {
   '/performance/scorecard': [
     { label: 'Performance', href: '/performance/leaderboard' },
     { label: 'Scorecard' },
+  ],
+  // Module level
+  '/manager': [
+    { label: 'Manager' },
+  ],
+  '/coordinator': [
+    { label: 'Coordinator' },
   ],
   // Email detail
   '/emails/[id]': [
