@@ -40,6 +40,58 @@ model Mailbox {
   emails Email[]
 }
 
+// Master Inbox - Еден извор за сите влезни податоци
+// Сите модули (Email, ERP, Manual) ги запишуваат податоците тука
+// Потоа Task Engine ги обработува и креира tasks
+model InboundItem {
+  id                    String    @id @default(uuid())
+  
+  // Извор на податоци
+  sourceType             String    // EMAIL, ERP, MANUAL
+  sourceId             String?   // ID од оригиналниот извор (emailId, erpDocumentId, итн)
+  sourceData           String?   // JSON со оригиналните податоци
+  
+  // Статус на обработка
+  intakeStatus          String    @default("RECLAIMED")  // RECLAIMED, PROCESSED, FAILED, CANCELLED
+  processedAt          DateTime?
+  processedBy          String?   // User ID
+  
+  // Екстрактирани податоци (заеднички за сите извори)
+  subject             String?
+  supplierName         String?
+  locationName        String?
+  partnerCode         String?   // Добавувач/клиент код
+  
+  // Време и датуми
+  requestedDate       DateTime? // Кога е побарано/планирано
+  receivedAt         DateTime  @default(now()) // Кога е примено
+  
+  // Класификација
+  requestType         String?   // INBOUND_RECEIPT, OUTBOUND_PREPARATION, OUTBOUND_DELIVERY, TRANSFER_DISTRIBUTION
+  priority           String?   // LOW, MEDIUM, HIGH
+  classification     String?   // Резултат од ML/AI класификација
+  
+  // Дополнителни полиња специфични за тип
+  note               String?
+  referenceNumber    String?   // Број на нарачка/документ
+  
+  // Поврзани entities
+  erpDocumentId       String?
+  erpDocument       ErpDocument? @relation(fields: [erpDocumentId], references: [id])
+  
+  // Историја
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  
+  // Индекси за брзо пре baranje
+  @@index([sourceType, intakeStatus])
+  @@index([requestType])
+  @@index([supplierName])
+  @@index([processedAt])
+  @@index([inboundItemId])
+}
+
+// Model: Email (Record from email inbox - НЕ се користи директно, само за архиви)
 model Email {
   id                    String    @id @default(uuid())
   mailboxId             String
@@ -55,11 +107,15 @@ model Email {
   extractedSupplier     String?
   extractedLocation     String?
   extractedDeliveryDate DateTime?
-  extractedUrgency      String?
-  requestType           String    @default("UNCLASSIFIED")
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  extractedUrgency    String?
+  requestType         String    @default("UNCLASSIFIED")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
+  // Поврзан inboundItem за централна обработка
+  inboundItemId       String?
+  inboundItem       InboundItem? @relation(fields: [inboundItemId], references: [id])
+  
   tasks Task[]
   case  EmailCase?
 }
@@ -77,6 +133,10 @@ model Task {
   dueDate     DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  
+  // Главен извор на податоци (ги заменува emailId, erpDocumentId)
+  inboundItemId       String?
+  inboundItem       InboundItem? @relation(fields: [inboundItemId], references: [id])
 
   // New fields for Reports & OTIF module
   assignedAt        DateTime?
@@ -87,7 +147,7 @@ model Task {
   delayReasonText   String?
   isRequiredForCase Boolean   @default(true)
 
-  // ERP Integration
+  // ERP Integration (legacy - сега преку InboundItem)
   erpDocumentId String?
   erpDocument   ErpDocument? @relation("ErpDocumentTasks", fields: [erpDocumentId], references: [id])
 
@@ -102,6 +162,8 @@ model Task {
   comments      TaskComment[]
   auditLogs     AuditLog[]
   statusHistory TaskStatusHistory[]
+  
+  @@index([inboundItemId])
 }
 
 model TaskDependency {
@@ -285,6 +347,10 @@ model ErpDocument {
   lineCount     Int       @default(0)
   totalQuantity Int       @default(0)
   plannedDate   DateTime?
+  
+  // Поврзан InboundItem за централна обработка
+  inboundItemId       String?
+  inboundItem       InboundItem? @relation(fields: [inboundItemId], references: [id])
 
   // Tasks created from this document
   tasks Task[] @relation("ErpDocumentTasks")
