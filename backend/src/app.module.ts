@@ -10,6 +10,7 @@ import { ReportsModule } from './reports/reports.module';
 import { ErpModule } from './erp/erp.module';
 import { PerformanceModule } from './performance/performance.module';
 import { InboundModule } from './inbound/inbound.module';
+import { AiModule } from './ai/ai.module';
 import { HealthController } from './common/health.controller';
 
 @Module({
@@ -28,6 +29,7 @@ import { HealthController } from './common/health.controller';
     ErpModule,
     PerformanceModule,
     InboundModule,
+    AiModule,
   ],
   controllers: [HealthController],
 })
