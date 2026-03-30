@@ -72,36 +72,32 @@ export class InboundService {
    */
   async getManagerSummary() {
     const now = new Date();
-    const todayStart = new Date(now.setHours(0, 0, 0, 0));
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    todayStart.setHours(0, 0, 0, 0);
 
-    // Get counts by status
-    const [total, newToday, pendingClassification, inProgress, completed] = await Promise.all([
-      // Total inbound items
-      this.prisma.inboundItem.count(),
+    // Manager-meaningful counts
+    const total = await this.prisma.inboundItem.count();
+    const newToday = await this.prisma.inboundItem.count({
+      where: { receivedAt: { gte: todayStart } },
+    });
 
-      // New today
-      this.prisma.inboundItem.count({
-        where: { receivedAt: { gte: todayStart } },
-      }),
-
-      // Pending classification (RECLAIMED status)
-      this.prisma.inboundItem.count({
-        where: { intakeStatus: 'RECLAIMED' },
-      }),
-
-      // In progress (processed but not completed)
-      this.prisma.inboundItem.count({
-        where: { intakeStatus: 'PROCESSED' },
-      }),
-
-      // Completed today
-      this.prisma.inboundItem.count({
-        where: { 
-          intakeStatus: 'PROCESSED',
-          processedAt: { gte: todayStart },
-        },
-      }),
+    // Get base counts
+    const [reclaimed, processed, failed, highPriority] = await Promise.all([
+      this.prisma.inboundItem.count({ where: { intakeStatus: 'RECLAIMED' } }),
+      this.prisma.inboundItem.count({ where: { intakeStatus: 'PROCESSED' } }),
+      this.prisma.inboundItem.count({ where: { intakeStatus: 'FAILED' } }),
+      this.prisma.inboundItem.count({ where: { priority: 'HIGH' } }),
     ]);
+
+    // Get case/task-based for meaningful metrics
+    const [doneCases, activeCases] = await Promise.all([
+      this.prisma.emailCase.count({ where: { caseStatus: 'DONE' } }),
+      this.prisma.emailCase.count({ where: { caseStatus: 'IN_PROGRESS' } }),
+    ]);
+
+    const pendingClassification = reclaimed;
+    const inProgress = activeCases;
+    const completed = doneCases;
 
     // Get breakdown by source type
     const sourceBreakdown = await this.prisma.inboundItem.groupBy({
@@ -121,7 +117,7 @@ export class InboundService {
         OR: [
           { priority: 'HIGH' },
           { 
-            intakeStatus: { in: ['RECLAIMED', 'PROCESSED', 'FAILED'] },
+            intakeStatus: { in: ['RECLAIMED'] },
             requestedDate: { lt: now },
           },
         ],
