@@ -248,6 +248,10 @@ export class CaseAggregationService {
       throw new Error('Case not found');
     }
 
+    if (!emailCase.email) {
+      throw new Error('Case has no linked email');
+    }
+
     const allTasks = emailCase.email.tasks;
     const tasks = allTasks.filter(t => t.isRequiredForCase !== false);
     const requiredTasks = tasks; // All non-excluded tasks are required
@@ -292,10 +296,10 @@ export class CaseAggregationService {
       .filter(h => h.toStatus === 'APPROVED')
       .sort((a, b) => a.changedAt.getTime() - b.changedAt.getTime());
 
-    if (approvalHistory.length > 0 && emailCase.email.receivedAt) {
+    if (approvalHistory.length > 0 && emailCase.email?.receivedAt) {
       const firstApproval = approvalHistory[0];
       approvalLeadMinutes = Math.round(
-        (firstApproval.changedAt.getTime() - emailCase.email.receivedAt.getTime()) / 60000
+        (firstApproval.changedAt.getTime() - emailCase.email!.receivedAt.getTime()) / 60000
       );
     }
 

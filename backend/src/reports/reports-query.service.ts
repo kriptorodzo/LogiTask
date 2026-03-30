@@ -149,6 +149,7 @@ export class ReportsQueryService {
     const coordinatorMap = new Map<string, any>();
 
     for (const caseData of cases) {
+      if (!caseData.email) continue;
       for (const task of caseData.email.tasks) {
         if (!task.assigneeId) continue;
 
@@ -356,6 +357,7 @@ export class ReportsQueryService {
     const delayMap = new Map<string, any>();
 
     for (const caseData of cases) {
+      if (!caseData.email) continue;
       for (const task of caseData.email.tasks) {
         const key = this.getDelayGroupKey(task, filters.groupBy || 'reason');
         

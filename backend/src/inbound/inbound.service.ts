@@ -181,7 +181,17 @@ export class InboundService {
     locationName?: string;
     dueDate?: Date;
   }) {
-    // Update inbound item
+    // Get existing inbound item
+    const existingItem = await this.prisma.inboundItem.findUnique({
+      where: { id },
+      include: { emails: true }
+    });
+    
+    if (!existingItem) {
+      throw new Error('Inbound item not found');
+    }
+
+    // Update inbound item status to PROCESSED
     const inboundItem = await this.prisma.inboundItem.update({
       where: { id },
       data: {
@@ -195,12 +205,54 @@ export class InboundService {
       },
     });
 
-    // If there's an email, create case and tasks
-    if (inboundItem.sourceType === 'EMAIL' && inboundItem.sourceId) {
-      // The case and tasks are created through classifyEmail
-      // This is handled by the email service
-    }
+    // Get linked email ID if exists
+    const emailId = existingItem.emails?.[0]?.id || null;
 
-    return inboundItem;
+    // Create Case for this inbound item
+    const emailCase = await this.prisma.emailCase.create({
+      data: {
+        emailId: emailId,
+        inboundItemId: inboundItem.id,
+        caseStatus: 'PROPOSED',
+        classification: data.requestType || null,
+        priority: data.priority || 'MEDIUM',
+        supplierName: data.supplierName,
+        locationName: data.locationName,
+        deliveryDueAt: data.dueDate,
+        caseDueAt: data.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default 7 days
+      },
+    });
+
+    // Create a Task for the case
+    const taskRequestType = data.requestType || existingItem.requestType || 'OTHER';
+    await this.prisma.task.create({
+      data: {
+        emailId: emailId,
+        inboundItemId: inboundItem.id,
+        title: `${taskRequestType.replace('_', ' ')} - ${data.supplierName || inboundItem.subject || 'Task'}`,
+        description: `Task for processing: ${inboundItem.subject || 'Inbound item ' + id}`,
+        status: 'PROPOSED',
+        requestType: taskRequestType,
+        dueDate: data.dueDate,
+        isRequiredForCase: true,
+      },
+    });
+
+    // Update case totalTasks
+    await this.prisma.emailCase.update({
+      where: { id: emailCase.id },
+      data: { totalTasks: 1 }
+    });
+
+    // Update inbound tasksGenerated count
+    await this.prisma.inboundItem.update({
+      where: { id },
+      data: { tasksGenerated: 1 }
+    });
+
+    return {
+      ...inboundItem,
+      caseId: emailCase.id,
+    };
   }
 }

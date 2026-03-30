@@ -225,8 +225,8 @@ model AuditLog {
 
 model EmailCase {
   id                   String    @id @default(uuid())
-  emailId              String    @unique
-  email                Email     @relation(fields: [emailId], references: [id])
+  emailId              String?   @unique  // Made optional - can use inboundItemId instead
+  email                Email?    @relation(fields: [emailId], references: [id])
   
   // Link to Master Inbox (NEW!)
   inboundItemId        String?
