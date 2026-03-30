@@ -48,11 +48,13 @@ model InboundItem {
   
   // Извор на податоци
   sourceType             String    // EMAIL, ERP, MANUAL
+  sourceSubType        String?   // EMAIL_RECEIVED, ERP_PO, ERP_GR, etc.
   sourceId             String?   // ID од оригиналниот извор (emailId, erpDocumentId, итн)
   sourceData           String?   // JSON со оригиналните податоци
   
   // Статус на обработка
   intakeStatus          String    @default("RECLAIMED")  // RECLAIMED, PROCESSED, FAILED, CANCELLED
+  processingStatus      String    @default("RECLAIMED")  // Alias
   processedAt          DateTime?
   processedBy          String?   // User ID
   
@@ -65,6 +67,7 @@ model InboundItem {
   // Време и датуми
   requestedDate       DateTime? // Кога е побарано/планирано
   receivedAt         DateTime  @default(now()) // Кога е примено
+  ingestedAt          DateTime? // Кога е ingest-ирано
   
   // Класификација
   requestType         String?   // INBOUND_RECEIPT, OUTBOUND_PREPARATION, OUTBOUND_DELIVERY, TRANSFER_DISTRIBUTION
@@ -75,20 +78,25 @@ model InboundItem {
   note               String?
   referenceNumber    String?   // Број на нарачка/документ
   
-  // Поврзани entities
-  erpDocumentId       String?
-  erpDocument       ErpDocument? @relation(fields: [erpDocumentId], references: [id])
-  
+  // Task count
+  tasksGenerated      Int       @default(0)
+
+  // Inverse relations - other models have inboundItemId pointing to us
+  emails              Email[]      @relation("InboundEmail")
+  erpDocuments         ErpDocument[] @relation("InboundErpDocument")
+  cases                EmailCase[]  @relation("InboundCase")
+  tasks                Task[]       @relation("InboundTask")
+
   // Историја
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   
   // Индекси за брзо пре baranje
   @@index([sourceType, intakeStatus])
+  @@index([sourceType, processingStatus])
   @@index([requestType])
   @@index([supplierName])
   @@index([processedAt])
-  @@index([inboundItemId])
 }
 
 // Model: Email (Record from email inbox - НЕ се користи директно, само за архиви)
@@ -114,7 +122,7 @@ model Email {
 
   // Поврзан inboundItem за централна обработка
   inboundItemId       String?
-  inboundItem       InboundItem? @relation(fields: [inboundItemId], references: [id])
+  inboundItem       InboundItem? @relation("InboundEmail", fields: [inboundItemId], references: [id])
   
   tasks Task[]
   case  EmailCase?
@@ -136,7 +144,7 @@ model Task {
   
   // Главен извор на податоци (ги заменува emailId, erpDocumentId)
   inboundItemId       String?
-  inboundItem       InboundItem? @relation(fields: [inboundItemId], references: [id])
+  inboundItem       InboundItem? @relation("InboundTask", fields: [inboundItemId], references: [id])
 
   // New fields for Reports & OTIF module
   assignedAt        DateTime?
@@ -222,7 +230,7 @@ model EmailCase {
   
   // Link to Master Inbox (NEW!)
   inboundItemId        String?
-  inboundItem          InboundItem? @relation(fields: [inboundItemId], references: [id])
+  inboundItem          InboundItem? @relation("InboundCase", fields: [inboundItemId], references: [id])
   
   caseStatus           String    @default("NEW") // NEW, PROPOSED, APPROVED, IN_PROGRESS, DONE, PARTIAL, FAILED, CANCELLED
   classification       String? // INBOUND_RECEIPT, OUTBOUND_DELIVERY, DISTRIBUTION, OTHER
@@ -356,7 +364,7 @@ model ErpDocument {
   
   // Поврзан InboundItem за централна обработка
   inboundItemId       String?
-  inboundItem       InboundItem? @relation(fields: [inboundItemId], references: [id])
+  inboundItem       InboundItem? @relation("InboundErpDocument", fields: [inboundItemId], references: [id])
 
   // Tasks created from this document
   tasks Task[] @relation("ErpDocumentTasks")
