@@ -1,0 +1,5 @@
+documentNumber,documentType,partnerCode,partnerName,destinationCode,destinationName,plannedDate,lineCount,totalQuantity
+GR-2026-100,GOODS_RECEIPT,P1,Макпетрол АД,D1,Скопје,2026-03-28,5,480
+GR-2026-101,GOODS_RECEIPT,P2,Еурокоп АД,D1,Скопје,2026-03-29,3,290
+GR-2026-102,GOODS_RECEIPT,P3,Витаминка АД,D2,Битола,2026-03-30,8,750
+GR-2026-103,GOODS_RECEIPT,P4,Алкалоид АД,D1,Скопје,2026-04-01,2,195

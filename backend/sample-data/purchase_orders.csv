@@ -1,0 +1,6 @@
+documentNumber,documentType,partnerCode,partnerName,destinationCode,destinationName,plannedDate,lineCount,totalQuantity
+PO-2026-100,PURCHASE_ORDER,P1,Макпетрол АД,D1,Скопје,2026-04-01,5,500
+PO-2026-101,PURCHASE_ORDER,P2,Еурокоп АД,D1,Скопје,2026-04-02,3,300
+PO-2026-102,PURCHASE_ORDER,P3,Витаминка АД,D2,Битола,2026-04-03,8,800
+PO-2026-103,PURCHASE_ORDER,P4,Алкалоид АД,D1,Скопје,2026-04-05,2,200
+PO-2026-104,PURCHASE_ORDER,P5,Табако АД,D3,Прилеп,2026-04-06,6,600
