@@ -226,8 +226,8 @@ export default function ErpImportPage() {
           <div></div>
         </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid #e0e0e0' }}>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid #e0e0e0' }}>
         {(['upload', 'preview', 'results'] as const).map(tab => (
           <button
             key={tab}
