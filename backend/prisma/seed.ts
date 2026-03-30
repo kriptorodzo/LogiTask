@@ -400,6 +400,25 @@ async function createEmailScenario(
   const now = new Date();
   const receivedAt = new Date(now.getTime() - scenario.daysAgo * 24 * 60 * 60 * 1000);
 
+  // Step 1: Create InboundItem (Master Inbox)
+  const inboundItem = await prisma.inboundItem.create({
+    data: {
+      id: uuid(),
+      sourceType: 'EMAIL',
+      sourceSubType: 'EMAIL_SEED',
+      sourceId: null, // Will be updated after email is created
+      subject: scenario.subject,
+      supplierName: scenario.supplier,
+      locationName: scenario.location,
+      requestedDate: scenario.location ? randomDate(1, 5) : null,
+      priority: scenario.overdue ? 'HIGH' : 'MEDIUM',
+      requestType: scenario.requestType || 'UNCLASSIFIED',
+      processingStatus: scenario.status === 'PENDING' ? 'RECLAIMED' : 'PROCESSED',
+      receivedAt,
+      ingestedAt: now,
+    },
+  });
+
   const email = await prisma.email.create({
     data: {
       id: uuid(),
@@ -416,7 +435,15 @@ async function createEmailScenario(
       extractedDeliveryDate: scenario.location ? randomDate(1, 5) : null,
       extractedUrgency: scenario.overdue ? 'HIGH' : 'MEDIUM',
       requestType: scenario.requestType || 'UNCLASSIFIED',
+      // Link to InboundItem
+      inboundItemId: inboundItem.id,
     },
+  });
+
+  // Update InboundItem with source ID
+  await prisma.inboundItem.update({
+    where: { id: inboundItem.id },
+    data: { sourceId: email.id },
   });
 
   // Create case if processed
@@ -467,6 +494,7 @@ async function createEmailScenario(
         data: {
           id: uuid(),
           emailId: email.id,
+          inboundItemId: inboundItem.id,  // Link to Master Inbox
           title: scenario.subject,
           description: `Задача ${i + 1} од случај: ${scenario.subject}`,
           status: taskStatus,

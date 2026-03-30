@@ -110,7 +110,26 @@ export class EmailService {
       plainText,
     );
 
-    // Store email in database
+    // Step 1: Create InboundItem (Master Inbox)
+    const inboundItem = await this.prisma.inboundItem.create({
+      data: {
+        sourceType: 'EMAIL',
+        sourceSubType: 'EMAIL_MICROSOFT',
+        sourceId: graphEmail.id,
+        sourceData: JSON.stringify(graphEmail),
+        subject: graphEmail.subject,
+        supplierName: extracted.supplier,
+        locationName: extracted.location,
+        requestedDate: extracted.deliveryDate,
+        priority: extracted.urgency || 'MEDIUM',
+        requestType: requestType,
+        processingStatus: 'RECLAIMED',
+        receivedAt: new Date(graphEmail.receivedDateTime),
+        ingestedAt: new Date(),
+      },
+    });
+
+    // Step 2: Store email in database with link to InboundItem
     const email = await this.prisma.email.create({
       data: {
         mailboxId,
@@ -127,7 +146,15 @@ export class EmailService {
         extractedDeliveryDate: extracted.deliveryDate,
         extractedUrgency: extracted.urgency,
         requestType,
+        // Link to InboundItem (NEW!)
+        inboundItemId: inboundItem.id,
       },
+    });
+
+    // Update InboundItem with external reference
+    await this.prisma.inboundItem.update({
+      where: { id: inboundItem.id },
+      data: { sourceId: email.id },
     });
 
     return email;
