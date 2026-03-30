@@ -1,67 +1,41 @@
 name: Auto-Merge Dependabot PRs
 
 on:
-  workflow_run:
-    workflows: ['CI', 'Tests', 'Build', 'Test']
-    types: [completed]
-    branches: [main, master]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_target:
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: read
 
 jobs:
   auto-merge-dependabot:
     runs-on: ubuntu-latest
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'dependabot/')
-    permissions:
-      contents: write
-      pull-requests: write
+      github.actor == 'dependabot[bot]'
     steps:
-      - name: Get Workflow Run info
+      - name: Check if PR is mergeable
+        id: check
         run: |
-          echo "Workflow run head branch: ${{ github.event.workflow_run.head_branch }}"
-          echo "Workflow run conclusion: ${{ github.event.workflow_run.conclusion }}"
-
-      - name: Get Pull Request info
-        id: pr_info
-        run: |
-          # Get the head branch from the workflow run
-          BRANCH_NAME="${{ github.event.workflow_run.head_branch }}"
+          PR=${{ github.event.pull_request.number }}
           
-          # Extract PR number from the branch name (dependabot/npm_and_yarn/123)
-          PR_NUMBER=$(echo "$BRANCH_NAME" | grep -oP '(?<=dependabot/[^/]+/)\d+' || echo "")
+          # Check mergeable status
+          MERGEABLE=$(gh pr view $PR --json mergeable --jq '.mergeable')
+          MERGE_STATE=$(gh pr view $PR --json mergeableState --jq '.mergeableState')
           
-          if [ -z "$PR_NUMBER" ]; then
-            echo "Could not extract PR number from branch: $BRANCH_NAME"
-            exit 1
-          fi
+          echo "Mergeable: $MERGEABLE, State: $MERGE_STATE"
           
-          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
-
-      - name: Check if PR is from Dependabot and mergeable
-        id: check_dependabot
-        run: |
-          PR_NUMBER="${{ steps.pr_info.outputs.PR_NUMBER }}"
-          
-          if [ -z "$PR_NUMBER" ]; then
-            echo "No PR number found"
-            exit 1
-          fi
-          
-          AUTHOR=$(gh pr view "$PR_NUMBER" --json author --jq '.author.login')
-          MERGEABLE=$(gh pr view "$PR_NUMBER" --json mergeable --jq '.mergeable')
-          
-          echo "PR author: $AUTHOR"
-          echo "PR mergeable: $MERGEABLE"
-          
-          if [ "$AUTHOR" = "dependabot[bot]" ] && [ "$MERGEABLE" = "true" ]; then
-            echo "is_dependabot_and_mergeable=true" >> $GITHUB_OUTPUT
+          if [ "$MERGEABLE" = "true" ] && [ "$MERGE_STATE" = "clean" ]; then
+            echo "can_merge=true" >> $GITHUB_OUTPUT
           else
-            echo "is_dependabot_and_mergeable=false" >> $GITHUB_OUTPUT
+            echo "can_merge=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Merge Dependabot PR
-        if: steps.check_dependabot.outputs.is_dependabot_and_mergeable == 'true'
+      - name: Merge PR
+        if: steps.check.outputs.can_merge == 'true'
         run: |
-          PR_NUMBER="${{ steps.pr_info.outputs.PR_NUMBER }}"
-          echo "Merging PR #$PR_NUMBER"
-          gh pr merge "$PR_NUMBER" --admin --auto
+          gh pr merge ${{ github.event.pull_request.number }} --admin --auto --squash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
