@@ -55,7 +55,7 @@ export default function LeaderboardPage() {
   }, [selectedMonth, selectedYear, selectedRole]);
 
   useEffect(() => {
-    return () => clearState();
+    return () => {};
   }, []);
 
   useEffect(() => {

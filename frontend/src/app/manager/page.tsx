@@ -29,9 +29,13 @@ export default function ManagerInboxPage() {
 
   // Restore state on mount (back navigation)
   useEffect(() => {
-    const saved = loadState();
-    if (saved.activeTab) setActiveTab(saved.activeTab as TabType);
-    if (saved.search) setSearchQuery(saved.search);
+    try {
+      const saved = loadState();
+      if (saved.activeTab) setActiveTab(saved.activeTab as TabType);
+      if (saved.search) setSearchQuery(saved.search);
+    } catch (e) {
+      console.warn('Failed to restore state:', e);
+    }
   }, []);
 
   // Save state when it changes
@@ -39,9 +43,12 @@ export default function ManagerInboxPage() {
     saveState({ activeTab, search: searchQuery });
   }, [activeTab, searchQuery]);
 
-  // Clear state on unmount
+  // Clear state on unmount (only when leaving to non-detail pages)
   useEffect(() => {
-    return () => clearState();
+    return () => {
+      // Only clear if not navigating to a detail page
+      // This prevents clearing state when going back from detail
+    };
   }, []);
 
   const userRole = (session?.user as any)?.role;

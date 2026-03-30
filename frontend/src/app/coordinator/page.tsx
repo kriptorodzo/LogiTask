@@ -36,7 +36,7 @@ export default function CoordinatorPage() {
   }, [activeTab, searchQuery]);
 
   useEffect(() => {
-    return () => clearState();
+    return () => {};
   }, []);
   const [updating, setUpdating] = useState<string | null>(null);
 

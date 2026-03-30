@@ -15,7 +15,7 @@ export function useStatePersistence(
   defaultState?: Partial<PersistedState>
 ) {
   const storageKey = `logistate_${key}`;
-  const initialLoad = useRef(true);
+  const isMounted = useRef(true);
 
   // Load state from sessionStorage
   const loadState = useCallback((): Partial<PersistedState> => {
@@ -35,7 +35,8 @@ export function useStatePersistence(
 
   // Save state to sessionStorage
   const saveState = useCallback((state: Partial<PersistedState>) => {
-    if (typeof window === 'undefined') return;
+    // Don't save if unmounted
+    if (!isMounted.current || typeof window === 'undefined') return;
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(state));
     } catch (e) {
@@ -60,6 +61,14 @@ export function useStatePersistence(
       .some((nav: any) => nav.type === 'back_forward') || false;
   }, []);
 
+  // Mark as mounted on mount, unmounted on unmount
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   return {
     loadState,
     saveState,
@@ -73,10 +82,20 @@ export function useStatePersistence(
  */
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedValue(value);
+      if (isMounted.current) {
+        setDebouncedValue(value);
+      }
     }, delay);
 
     return () => {
