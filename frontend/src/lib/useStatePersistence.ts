@@ -35,7 +35,6 @@ export function useStatePersistence(
 
   // Save state to sessionStorage
   const saveState = useCallback((state: Partial<PersistedState>) => {
-    // Don't save if unmounted
     if (!isMounted.current || typeof window === 'undefined') return;
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(state));
@@ -78,24 +77,14 @@ export function useStatePersistence(
 }
 
 /**
- * Hook for debouncing value changes
+ * Hook for debouncing value changes - SSR safe version
  */
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  const isMounted = useRef(true);
-
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (isMounted.current) {
-        setDebouncedValue(value);
-      }
+      setDebouncedValue(value);
     }, delay);
 
     return () => {
