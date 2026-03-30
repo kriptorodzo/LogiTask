@@ -274,15 +274,15 @@ export default function ManagerInboxPage() {
 
   const tabLabels: Record<TabType, string> = {
     new: 'New',
-    pending: 'Pending Approval',
-    delegated: 'Delegated',
+    pending: 'Needs Action',
+    delegated: 'Active',
     problematic: 'Problematic',
     overdue: 'Overdue'
   };
 
   const tabIcons: Record<TabType, string> = {
     new: '🆕',
-    pending: '⏳',
+    pending: '⚡',
     delegated: '📤',
     problematic: '⚠️',
     overdue: '🔴'
@@ -373,77 +373,84 @@ export default function ManagerInboxPage() {
                     <strong>📊 System Summary:</strong> {getEmailSummary(email)}
                   </div>
 
-                  {/* Tasks Table */}
+                  {/* Tasks Summary - SIMPLIFIED */}
                   {emailTasks.length > 0 && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <h4 style={{ marginBottom: '8px' }}>📋 Proposed Tasks ({emailTasks.length})</h4>
-                      <table className="table" style={{ fontSize: '14px' }}>
-                        <thead>
-                          <tr>
-                            <th>Task</th>
-                            <th>Type</th>
-                            <th>Due</th>
-                            <th>Status</th>
-                            <th>Assign To</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {emailTasks.map(task => (
-                            <tr key={task.id}>
-                              <td>{task.title}</td>
-                              <td>{getTypeLabel(task.requestType)}</td>
-                              <td>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</td>
-                              <td>
-                                <span className={`badge ${getStatusBadge(task.status)}`}>
-                                  {task.status === 'PROPOSED' ? 'Proposed' : 
-                                   task.status === 'APPROVED' ? 'Approved' :
-                                   task.status === 'IN_PROGRESS' ? 'In Progress' : 
-                                   task.status === 'DONE' ? 'Done' : task.status}
-                                </span>
-                              </td>
-                              <td>
-                                {task.status === 'PROPOSED' ? (
-                                  <select
-                                    onChange={(e) => {
-                                      if (e.target.value) {
-                                        handleApproveTask(task.id, e.target.value);
-                                        e.target.value = '';
-                                      }
-                                    }}
-                                    style={{ padding: '4px', fontSize: '12px' }}
-                                  >
-                                    <option value="">Select...</option>
-                                    {coordinators.map(c => (
-                                      <option key={c.id} value={c.id}>
-                                        {c.displayName || c.email}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  (task as any).assignee?.displayName || '-'
-                                )}
-                              </td>
-                              <td>
-                                {task.status === 'PROPOSED' && (
-                                  <button
-                                    onClick={() => handleRejectTask(task.id)}
-                                    style={{ 
-                                      background: 'none', 
-                                      border: 'none', 
-                                      color: '#d13438', 
-                                      cursor: 'pointer',
-                                      fontSize: '12px'
-                                    }}
-                                  >
-                                    ❌
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div style={{ 
+                      marginBottom: '16px', 
+                      padding: '12px', 
+                      background: '#f9fafb', 
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>
+                          📋 Tasks ({emailTasks.length})
+                        </h4>
+                        {/* Quick status pills */}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {emailTasks.filter(t => t.status === 'PROPOSED').length > 0 && (
+                            <span style={{ 
+                              background: '#fef3c7', 
+                              color: '#92400e', 
+                              padding: '2px 8px', 
+                              borderRadius: '12px', 
+                              fontSize: '12px' 
+                            }}>
+                              {emailTasks.filter(t => t.status === 'PROPOSED').length} Pending
+                            </span>
+                          )}
+                          {emailTasks.filter(t => t.status === 'IN_PROGRESS').length > 0 && (
+                            <span style={{ 
+                              background: '#dbeafe', 
+                              color: '#1e40af', 
+                              padding: '2px 8px', 
+                              borderRadius: '12px', 
+                              fontSize: '12px' 
+                            }}>
+                              {emailTasks.filter(t => t.status === 'IN_PROGRESS').length} In Progress
+                            </span>
+                          )}
+                          {emailTasks.filter(t => t.status === 'DONE').length > 0 && (
+                            <span style={{ 
+                              background: '#d1fae5', 
+                              color: '#065f46', 
+                              padding: '2px 8px', 
+                              borderRadius: '12px', 
+                              fontSize: '12px' 
+                            }}>
+                              {emailTasks.filter(t => t.status === 'DONE').length} Done
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Task types summary */}
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {[...new Set(emailTasks.map(t => t.requestType))].map(type => (
+                          <span key={type} style={{ 
+                            background: '#e5e7eb', 
+                            padding: '4px 8px', 
+                            borderRadius: '4px', 
+                            fontSize: '12px',
+                            color: '#374151'
+                          }}>
+                            {getTypeLabel(type)}
+                          </span>
+                        ))}
+                      </div>
+                      
+                      {/* If all proposed, show approve all button */}
+                      {emailTasks.every(t => t.status === 'PROPOSED') && emailTasks.length > 0 && (
+                        <div style={{ marginTop: '12px' }}>
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => handleApproveAll(email.id)}
+                            style={{ fontSize: '13px', padding: '8px 16px' }}
+                          >
+                            ✅ Approve All ({emailTasks.length} tasks)
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 

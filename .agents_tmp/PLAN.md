@@ -2,6 +2,8 @@
 
 Редизајнирање на manager и coordinator workflow-овите според реална логистичка операција, со јасно раздвојување на улоги, пристапи и одговорности. Целта е платформата да биде природна за реална употреба, со вистински role-based access control и безбедна делегациска логика.
 
+**Напредок:** Планот е готов. Пред имплементација, потребна е Verification Round за да се потврди дека предложените промени ќе работат како што е планирано.
+
 # 2. CONTEXT SUMMARY
 
 **Тековен проблем (од Code Review):**
@@ -20,8 +22,9 @@
 
 # 3. APPROACH OVERVIEW
 
-**Стратегија:** Имплементација во 6 фази:
+**Стратегија:** Имплементација во 7 фази:
 
+0. **Verification Round** - верификација на тековниот код и proposed changes
 1. **Role-based route protection** - middleware/guards за блокирање на неовластени рути
 2. **Role-specific navigation** - различни sidebar менюа по улога
 3. **Manager workflow redesign** - case/email-driven наместо task-table-driven
@@ -32,6 +35,155 @@
 ** rationale:** Овие промени се директно базирани на code review findings и ја адресираат секцијата "3. Rework manager/coordinator logic before continuing".
 
 # 4. IMPLEMENTATION STEPS
+
+## Phase 0: Verification Round (Пред имплементација)
+
+### Step 0.1: RBAC / Route Protection Verification
+
+**Goal:** Потврди дека route protection логиката е коректна
+**Method:** Преглед на постоечки middleware + auth логика
+
+**Проверки:**
+- [ ] Дали middleware.ts може да пристапи до session/role?
+- [ ] Дали NextAuth session содржи role информација?
+- [ ] Кои рути треба да се блокираат за coordinator?
+- [ ] Дали middleware е доволен или треба и server-side guards?
+
+**Files:** `frontend/src/middleware.ts`, `frontend/src/lib/auth.ts`, `frontend/src/app/manager/page.tsx`, `frontend/src/app/coordinator/page.tsx`
+
+---
+
+### Step 0.2: Role Navigation Validation
+
+**Goal:** Потврди каква navigation треба за секоја улога
+**Method:** Преглед на Sidebar.tsx и споредба со proposed navigation maps
+
+**Проверки:**
+- [ ] Кои менија ги гледа Manager сега?
+- [ ] Кои менија ги гледа Coordinator сега?
+- [ ] Дали role е достапен во компонентите?
+- [ ] Како да се спроведе role-based filtering?
+
+**Files:** `frontend/src/components/Sidebar.tsx`, `frontend/src/components/TopBar.tsx`
+
+---
+
+### Step 0.3: Manager Workflow Validation
+
+**Goal:** Потврди дека manager inbox logic е разбирлива
+**Method:** Преглед на manager page.tsx
+
+**Проверки:**
+- [ ] Дали email/case cards постојат или само task table?
+- [ ] Каде е "Approve All" логиката и дали е опасна?
+- [ ] Дали постои suggested delegation block?
+- [ ] Дали problematic/unclassified emails се идентификуваат?
+
+**Files:** `frontend/src/app/manager/page.tsx`
+
+---
+
+### Step 0.4: Coordinator Workflow Validation
+
+**Goal:** Потврди coordinator experience
+**Method:** Преглед на coordinator page.tsx
+
+**Проверки:**
+- [ ] Дали е табела или веќе има workboard елементи?
+- [ ] Кои tabs постојат и дали се логични?
+- [ ] Дали има filter по task type?
+- [ ] Кои quick actions постојат?
+
+**Files:** `frontend/src/app/coordinator/page.tsx`
+
+---
+
+### Step 0.5: End-to-End Manual Test Readiness
+
+**Goal:** Потврди дека системот е спремен за рачно тестирање
+**Method:** Преглед на API endpoints + seed data
+
+**Проверки:**
+- [ ] Дали има доволно seed data за тестирање?
+- [ ] Кои API endpoints враќаат tasks за coordinator?
+- [ ] Дали emails и tasks се поврзани?
+- [ ] Што уште е слабо за рачно тестирање?
+
+**Files:** `backend/src/task/task.controller.ts`, `backend/src/task/task.service.ts`
+
+---
+
+### Step 0.6: Verification Summary
+
+**Goal:** Документирај што е потврдено и што не е
+**Method:** Креирај извештај
+
+**На крај дај кратка нова оцена:**
+- Role separation: X/10
+- Manager workflow: X/10
+- Coordinator workflow: X/10
+- Delegation safety: X/10
+- Overall product clarity: X/10
+
+**Одлука:** Дали continue со имплементација или дополнителни preparation чекори?
+
+---
+
+## Phase 4 — Manual Product Validation & UX Simplification
+
+(После успешна имплементација на Phase 1-3)
+
+### Цел
+Да се провери дали новата логика е навистина добра за секојдневна оперативна употреба и да се идентификуваат останатите UX проблеми пред следна development фаза.
+
+### 1. Manager UX Validation
+Провери:
+- дали manager inbox е доволно јасен
+- дали cards се разбирливи на прв поглед
+- дали summary + warnings + suggestions се доволни
+- дали manager лесно разбира што треба да одобри, што да класифицира и што да делегира
+- дали inbox е и понатаму премногу task-heavy
+- дали треба уште повеќе case/email-first simplification
+
+### 2. Coordinator UX Validation
+Провери:
+- дали workboard е едноставен и брз
+- дали tabs се корисни
+- дали filters се реално потребни или има вишок
+- дали task cards се доволно читливи
+- дали Start / Complete flow е доволно брз
+- дали coordinator experience е чист и фокусиран само на извршување
+
+### 3. ERP/Admin UX Validation
+Провери:
+- дали ERP dashboard е јасен
+- дали import flow е разбирлив за business user
+- дали route plans се доволно логични
+- дали има премногу технички детали
+- дали треба поедноставување на import / preview / validation screens
+
+### 4. Reports Validation
+Провери:
+- дали reports се корисни за manager decision-making
+- дали KPI/OTIF/drilldowns се лесни за разбирање
+- дали navigation низ reports е природна
+- дали нешто е премногу техничко или непотребно
+
+### 5. Final UX Cleanup Proposal
+На крај дај:
+- што треба да се поедностави
+- што треба да се отстрани
+- што треба да се редизајнира
+- што треба да остане како што е
+
+### Output
+Дај краток извештај:
+1. што е добро
+2. што уште е слабо
+3. кои 5 UX подобрувања имаат најголема вредност
+4. дали системот е спремен за сериозно рачно тестирање од manager и coordinators
+
+---
 
 ## Phase 1: Role-Based Route Protection
 

@@ -18,6 +18,13 @@ const REQUEST_TYPE_LABELS: Record<string, string> = {
   TRANSFER_DISTRIBUTION: 'Дистрибуција',
 };
 
+// Role to task type mapping for auto-filtering
+const ROLE_DEFAULT_FILTER: Record<string, FilterType> = {
+  RECEPTION_COORDINATOR: 'INBOUND_RECEIPT',
+  DELIVERY_COORDINATOR: 'OUTBOUND_DELIVERY',
+  DISTRIBUTION_COORDINATOR: 'TRANSFER_DISTRIBUTION',
+};
+
 export default function CoordinatorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -29,17 +36,30 @@ export default function CoordinatorPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
   
+  // Get user role
+  const userRole = (session?.user as any)?.role || 'RECEPTION_COORDINATOR';
+  
+  // Get default filter for role
+  const getDefaultFilter = (): FilterType => {
+    return ROLE_DEFAULT_FILTER[userRole] || 'all';
+  };
+  
   // State persistence
   const { loadState, saveState } = useStatePersistence('coordinator', {
     activeTab: 'my',
-    typeFilter: 'all',
+    typeFilter: getDefaultFilter(),
     search: '',
   });
 
   useEffect(() => {
     const saved = loadState();
     if (saved.activeTab) setActiveTab(saved.activeTab as Tab);
-    if (saved.typeFilter) setTypeFilter(saved.typeFilter as FilterType);
+    // Apply role-based default filter if nothing saved
+    if (saved.typeFilter && saved.typeFilter !== 'all') {
+      setTypeFilter(saved.typeFilter as FilterType);
+    } else {
+      setTypeFilter(getDefaultFilter());
+    }
     if (saved.search) setSearchQuery(saved.search);
   }, []);
 
@@ -49,7 +69,6 @@ export default function CoordinatorPage() {
 
   const [updating, setUpdating] = useState<string | null>(null);
 
-  const userRole = (session?.user as any)?.role || 'RECEPTION_COORDINATOR';
   const userId = session?.user?.email;
 
   useEffect(() => {
@@ -222,43 +241,28 @@ export default function CoordinatorPage() {
           flexWrap: 'wrap',
           alignItems: 'center'
         }}>
-          {/* Type Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label style={{ fontSize: '14px', color: '#6b7280' }}>Тип:</label>
+          {/* Type Filter - only filter, no search */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+            <label style={{ fontSize: '14px', color: '#6b7280', whiteSpace: 'nowrap' }}>Филтрирај:</label>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as FilterType)}
               style={{
-                padding: '8px 12px',
+                padding: '10px 16px',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '14px',
                 background: 'white',
+                minWidth: '180px',
               }}
             >
+              <option value={getDefaultFilter()}>Мои задачи</option>
               <option value="all">Сите типови</option>
               <option value="INBOUND_RECEIPT">Прием</option>
               <option value="OUTBOUND_PREPARATION">Подготовка</option>
               <option value="OUTBOUND_DELIVERY">Испорака</option>
               <option value="TRANSFER_DISTRIBUTION">Дистрибуција</option>
             </select>
-          </div>
-
-          {/* Search */}
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <input
-              type="text"
-              placeholder="Барај задачи..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '14px',
-              }}
-            />
           </div>
         </div>
 
@@ -322,19 +326,19 @@ export default function CoordinatorPage() {
         ) : (
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', 
-            gap: '16px' 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', 
+            gap: '20px' 
           }}>
             {tasks.map(task => (
               <div
                 key={task.id}
                 style={{
-                  padding: '20px',
+                  padding: '24px',
                   border: '1px solid #e5e7eb',
-                  borderRadius: '12px',
+                  borderRadius: '16px',
                   backgroundColor: 'white',
-                  borderLeft: `4px solid ${getTypeColor(task.requestType)}`,
-                  boxShadow: isOverdue(task) ? '0 0 0 2px #ef4444, 0 2px 4px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.1)',
+                  borderLeft: `6px solid ${getTypeColor(task.requestType)}`,
+                  boxShadow: isOverdue(task) ? '0 0 0 2px #ef4444, 0 4px 6px rgba(0,0,0,0.1)' : '0 2px 4px rgba(0,0,0,0.1)',
                 }}
               >
                 {/* Header */}
@@ -404,14 +408,14 @@ export default function CoordinatorPage() {
                       disabled={updating === task.id}
                       style={{
                         flex: 1,
-                        padding: '10px 16px',
+                        padding: '14px 24px',
                         backgroundColor: '#3b82f6',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         cursor: updating === task.id ? 'not-allowed' : 'pointer',
-                        fontWeight: '500',
-                        fontSize: '14px',
+                        fontWeight: '600',
+                        fontSize: '15px',
                       }}
                     >
                       {updating === task.id ? 'Се активира...' : '▶️ Почни'}
@@ -424,14 +428,14 @@ export default function CoordinatorPage() {
                       disabled={updating === task.id}
                       style={{
                         flex: 1,
-                        padding: '10px 16px',
+                        padding: '14px 24px',
                         backgroundColor: '#10b981',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         cursor: updating === task.id ? 'not-allowed' : 'pointer',
-                        fontWeight: '500',
-                        fontSize: '14px',
+                        fontWeight: '600',
+                        fontSize: '15px',
                       }}
                     >
                       {updating === task.id ? 'Се завршува...' : '✅ Заврши'}
@@ -441,12 +445,13 @@ export default function CoordinatorPage() {
                   {task.status === 'DONE' && (
                     <div style={{
                       flex: 1,
-                      padding: '10px 16px',
+                      padding: '14px 24px',
                       backgroundColor: '#f3f4f6',
                       color: '#6b7280',
-                      borderRadius: '6px',
+                      borderRadius: '8px',
                       textAlign: 'center',
                       fontSize: '14px',
+                      fontWeight: '500',
                     }}>
                       ✓ Завршена
                     </div>
