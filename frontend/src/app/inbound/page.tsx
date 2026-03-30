@@ -30,11 +30,15 @@ interface InboundItem {
   referenceNumber: string | null;
   requestedDate: string | null;
   receivedAt: string;
-  processingStatus: string;
+  // Use intakeStatus as the authoritative status field
+  intakeStatus: string;
+  // Keep processingStatus for backward compatibility (may be null)
+  processingStatus?: string;
   requestType: string | null;
   priority: string | null;
   tasksGenerated: number;
   case: any;
+  cases: any[];
   tasks: any[];
   email: any;
   erpDocument: any;
@@ -89,12 +93,15 @@ export default function ManagerInboxPage() {
 
   async function loadData() {
     try {
+      console.log('[DEBUG] Loading inbound data...');
       const [inboundData, summaryData, coordinatorsData] = await Promise.all([
         inboundApi.getAll({}),
         inboundApi.getSummary(),
         userApi.getCoordinators(),
       ]);
-      setInboundItems(inboundData);
+      console.log('[DEBUG] inboundData length:', inboundData?.length);
+      console.log('[DEBUG] summaryData:', summaryData);
+      setInboundItems(inboundData || []);
       setSummary(summaryData);
       setCoordinators(coordinatorsData);
     } catch (error) {
@@ -109,18 +116,13 @@ export default function ManagerInboxPage() {
 
     switch (activeTab) {
       case 'new':
-        filtered = filtered.filter(item => item.processingStatus === 'RECLAIMED');
+        filtered = filtered.filter(item => item.intakeStatus === 'RECLAIMED');
         break;
       case 'in_progress':
-        filtered = filtered.filter(item => 
-          item.processingStatus === 'PROCESSED' && 
-          (!item.case || item.case.caseStatus !== 'DONE')
-        );
+        filtered = filtered.filter(item => item.intakeStatus === 'PROCESSED');
         break;
       case 'completed':
-        filtered = filtered.filter(item => 
-          item.case && item.case.caseStatus === 'DONE'
-        );
+        filtered = filtered.filter(item => item.intakeStatus === 'PROCESSED');
         break;
       case 'urgent':
         filtered = filtered.filter(item => 
