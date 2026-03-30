@@ -13,6 +13,10 @@ interface PageShellProps {
 }
 
 const MODULE_BREADCRUMBS: Record<string, { label: string; href?: string }[]> = {
+  // Reports
+  '/reports': [
+    { label: 'Reports' },
+  ],
   '/reports/coordinators': [
     { label: 'Reports', href: '/reports' },
     { label: 'Coordinators' },
@@ -29,6 +33,11 @@ const MODULE_BREADCRUMBS: Record<string, { label: string; href?: string }[]> = {
     { label: 'Reports', href: '/reports' },
     { label: 'Overview' },
   ],
+  // Admin
+  '/admin/erp': [
+    { label: 'Admin', href: '/admin/erp' },
+    { label: 'ERP' },
+  ],
   '/admin/performance': [
     { label: 'Admin', href: '/admin/erp' },
     { label: 'Performance' },
@@ -40,6 +49,25 @@ const MODULE_BREADCRUMBS: Record<string, { label: string; href?: string }[]> = {
   '/admin/erp/import': [
     { label: 'ERP', href: '/admin/erp' },
     { label: 'Import' },
+  ],
+  // Performance
+  '/performance/leaderboard': [
+    { label: 'Performance', href: '/performance/leaderboard' },
+    { label: 'Leaderboard' },
+  ],
+  '/performance/scorecard': [
+    { label: 'Performance', href: '/performance/leaderboard' },
+    { label: 'Scorecard' },
+  ],
+  // Email detail
+  '/emails/[id]': [
+    { label: 'Manager', href: '/manager' },
+    { label: 'Email' },
+  ],
+  // Task detail
+  '/tasks/[id]': [
+    { label: 'Tasks', href: '/coordinator' },
+    { label: 'Task' },
   ],
 };
 

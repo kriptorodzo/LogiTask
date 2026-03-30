@@ -168,7 +168,7 @@ export default function CasesPage() {
   }
 
   return (
-    <PageShell title="Case Drilldown" subtitle="Detailed case view">
+    <PageShell title="Case Drilldown" subtitle="Detailed case view" showBack backHref="/reports">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <div></div>

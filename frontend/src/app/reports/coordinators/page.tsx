@@ -117,7 +117,7 @@ export default function CoordinatorsPage() {
   }
 
   return (
-    <PageShell title="Coordinator Performance" subtitle="Report by coordinator">
+    <PageShell title="Coordinator Performance" subtitle="Report by coordinator" showBack backHref="/reports">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <div></div>

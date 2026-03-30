@@ -94,7 +94,7 @@ export default function ScorecardPage() {
   }
 
   return (
-    <PageShell title="My Performance" subtitle="Personal scorecard">
+    <PageShell title="My Performance" subtitle="Personal scorecard" showBack backHref="/reports">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <div></div>

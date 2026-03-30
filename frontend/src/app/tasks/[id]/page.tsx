@@ -106,7 +106,7 @@ export default function TaskDetailPage() {
   }
 
   return (
-    <PageShell title="Task Details" subtitle={task?.title || 'Loading...'}>
+    <PageShell title="Task Details" subtitle={task?.title || 'Loading...'} showBack backHref="/reports">
       <div className="p-6">
         <div className="grid grid-2">
           {/* Task Info */}

@@ -198,7 +198,7 @@ export default function EmailDetailPage() {
   const hasAnyTasks = email.tasks && email.tasks.length > 0;
 
   return (
-    <PageShell title="Email Details" subtitle={email?.subject || 'Loading...'}>
+    <PageShell title="Email Details" subtitle={email?.subject || 'Loading...'} showBack backHref="/reports">
       <div className="p-6">
         {/* Action Buttons for Manager */}
         {isManager && (
