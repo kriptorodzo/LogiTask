@@ -451,6 +451,13 @@ export default function ManagerInboxPage() {
                           </button>
                         </div>
                       )}
+                      
+                      {/* If mixed status, show partial info */}
+                      {emailTasks.some(t => t.status !== 'PROPOSED') && emailTasks.length > 0 && (
+                        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
+                          💡 {emailTasks.filter(t => t.status === 'PROPOSED').length} task(s) pending approval
+                        </div>
+                      )}
                     </div>
                   )}
 

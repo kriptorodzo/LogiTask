@@ -54,11 +54,12 @@ export default function CoordinatorPage() {
   useEffect(() => {
     const saved = loadState();
     if (saved.activeTab) setActiveTab(saved.activeTab as Tab);
-    // Apply role-based default filter if nothing saved
-    if (saved.typeFilter && saved.typeFilter !== 'all') {
+    // Apply role-based default filter
+    const defaultFilter = getDefaultFilter();
+    if (saved.typeFilter && saved.typeFilter !== 'all' && saved.typeFilter !== defaultFilter) {
       setTypeFilter(saved.typeFilter as FilterType);
     } else {
-      setTypeFilter(getDefaultFilter());
+      setTypeFilter(defaultFilter);
     }
     if (saved.search) setSearchQuery(saved.search);
   }, []);
@@ -68,8 +69,15 @@ export default function CoordinatorPage() {
   }, [activeTab, typeFilter, searchQuery]);
 
   const [updating, setUpdating] = useState<string | null>(null);
+  const [toast, setToast] = useState<{message: string; type: 'success' | 'error'} | null>(null);
 
   const userId = session?.user?.email;
+
+  // Toast helper
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -153,8 +161,10 @@ export default function CoordinatorPage() {
     try {
       await taskApi.updateStatus(taskId, newStatus);
       await loadAllTasks();
+      showToast(newStatus === 'IN_PROGRESS' ? '▶️ Започната задача' : '✅ Завршена задача');
     } catch (error) {
       console.error('Failed to update task:', error);
+      showToast('Грешка при ажурирање', 'error');
     } finally {
       setUpdating(null);
     }
@@ -230,6 +240,23 @@ export default function CoordinatorPage() {
   return (
     <PageShell title="My Workboard" subtitle={`Работна табла за ${userRole.replace('_', ' ')}`}>
       <div className="p-6">
+        {/* Toast Notification */}
+        {toast && (
+          <div style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '16px 24px',
+            background: toast.type === 'success' ? '#10b981' : '#ef4444',
+            color: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 1000,
+            fontWeight: '500',
+          }}>
+            {toast.message}
+          </div>
+        )}
         {/* Filters Row */}
         <div style={{ 
           display: 'flex', 
