@@ -435,3 +435,98 @@ model CoordinatorKPI {
   @@index([userId])
   @@index([month, year])
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+// AI Proposal Layer
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+model AiProposal {
+  id                   String    @id @default(uuid())
+  inboundItemId         String    @unique
+
+  // Proposal version for schema evolution
+  proposalVersion       String    @default("1.0")
+
+  // Status tracking
+  status               String    @default("GENERATED") // GENERATED, ACCEPTED, EDITED, REJECTED
+
+  // Summary and recommendation
+  summary              String?
+  managerRecommendation  String    @default("NEEDS_REVIEW") // NEEDS_REVIEW, SAFE_TO_APPROVE, NEEDS_CLARIFICATION, REJECT_OR_IGNORE
+  overallConfidence    String    @default("MEDIUM") // HIGH, MEDIUM, LOW
+
+  // Request interpretation
+  suggestedRequestType       String?
+  requestTypeConfidence       Float?
+  requestTypeBusinessMeaning  String?
+  requiresManagerClarification Boolean @default(false)
+
+  // Priority
+  suggestedPriority  String? // LOW, MEDIUM, HIGH
+  priorityReason     String?
+
+  // Coordinator routing
+  primaryCoordinatorType     String?
+  secondaryCoordinatorTypes  String? // JSON array stored as string
+  routingReason              String?
+
+  // Extracted fields (JSON)
+  extractedFieldsJson String?
+
+  // Proposed tasks (JSON array)
+  proposedTasksJson  String?
+
+  // Data quality flags (JSON array)
+  dataQualityFlagsJson String?
+
+  // Decision hints (JSON)
+  decisionHintsJson   String?
+
+  // Raw reasoning
+  rawReasoningSummary String?
+  rawModelResponseJson String?
+
+  // Model metadata
+  modelName          String    @default("logitask-v1")
+  temperature       Float     @default(0.2)
+
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([inboundItemId])
+  @@index([status])
+  @@index([overallConfidence])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// AI Feedback - Manager corrections
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+model AiFeedback {
+  id                   String    @id @default(uuid())
+  aiProposalId         String
+  inboundItemId        String
+
+  // Feedback type
+  feedbackType         String    // ACCEPTED, CORRECTED, REJECTED
+
+  // Original proposal snapshot
+  originalProposalJson String?
+
+  // Final decision snapshot
+  finalDecisionJson    String?
+
+  // Who provided feedback
+  createdBy           String?
+
+  // Additional feedback
+  qualityRating      String? // EXCELLENT, GOOD, POOR
+  feedbackText       String?
+
+  createdAt          DateTime  @default(now())
+
+  @@index([aiProposalId])
+  @@index([inboundItemId])
+  @@index([feedbackType])
+}

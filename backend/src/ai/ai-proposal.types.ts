@@ -1,323 +1,181 @@
 /**
- * ╔══════════════════════════════════════════════════════════════════════════════════════════╗
- * ║                      AI PROPOSAL SCHEMA DEFINITIONS                              ║
- * ╠══════════════════════════════════════════════════════════════════════════════════════════╣
- * ║                                                                              ║
- * ║  AI Role: Proposal/Copilot layer (NOT auto-execution)                         ║
- * ║  ─────────────────────────────────────────────────────                         ║
- * ║  - READS: InboundItem, Email, ERP data                                      ║
- * ║  - GENERATES: proposal for classification, role, tasks                         ║
- * ║  - PROVIDES: confidence score                                               ║
- * ║  - FLAGS: missing/ambiguous data                                            ║
- * ║                                                                              ║
- * ║  Manager remains FINAL decision-maker.                                     ║
- * ║  AI does NOT auto-approve, auto-delegate, or auto-complete.                  ║
- * ║                                                                              ║
- * ╚══════════════════════════════════════════════════════════════════════════════════════════╝
+ * AI Proposal Types - Plain interfaces
  */
 
-import { IsString, IsOptional, IsEnum, IsNumber, IsArray, ValidateNested, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
-
-/**
- * Request Type classifications
- */
 export enum RequestType {
   INBOUND_RECEIPT = 'INBOUND_RECEIPT',
-  OUTBOUND_DELIVERY = 'OUTBOUND_DELIVERY',
   OUTBOUND_PREPARATION = 'OUTBOUND_PREPARATION',
+  OUTBOUND_DELIVERY = 'OUTBOUND_DELIVERY',
   TRANSFER_DISTRIBUTION = 'TRANSFER_DISTRIBUTION',
+  UNCLASSIFIED = 'UNCLASSIFIED',
   OTHER = 'OTHER',
 }
 
-/**
- * Priority levels
- */
 export enum Priority {
-  HIGH = 'HIGH',
-  MEDIUM = 'MEDIUM',
   LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
 }
 
-/**
- * Coordinator types
- */
 export enum CoordinatorType {
   RECEPTION = 'RECEPTION_COORDINATOR',
   DELIVERY = 'DELIVERY_COORDINATOR',
   DISTRIBUTION = 'DISTRIBUTION_COORDINATOR',
 }
 
-/**
- * Data quality flags
- */
-export enum DataQualityFlag {
+export enum TaskDependencyType {
+  PRIMARY = 'PRIMARY',
+  SECONDARY = 'SECONDARY',
+  NOTIFICATION = 'NOTIFICATION',
+  OPTIONAL = 'OPTIONAL',
+}
+
+export enum DataQualityFlagCode {
   MISSING_SUPPLIER = 'MISSING_SUPPLIER',
+  MISSING_CLIENT = 'MISSING_CLIENT',
   MISSING_LOCATION = 'MISSING_LOCATION',
-  MISSING_DUE_DATE = 'MISSING_DUE_DATE',
-  AMBIGUOUS_CONTENT = 'AMBIGUOUS_CONTENT',
-  DUPLICATE_DETECTED = 'DUPLICATE_DETECTED',
-  HIGH_VALUE_ORDER = 'HIGH_VALUE_ORDER',
-  RUSH_ORDER = 'RUSH_ORDER',
+  MISSING_REQUESTED_DATE = 'MISSING_REQUESTED_DATE',
+  MISSING_REFERENCE = 'MISSING_REFERENCE',
+  AMBIGUOUS_REQUEST = 'AMBIGUOUS_REQUEST',
+  MULTI_STEP_OPERATION = 'MULTI_STEP_OPERATION',
+  POSSIBLE_DUPLICATE = 'POSSIBLE_DUPLICATE',
+  CONFLICTING_INSTRUCTIONS = 'CONFLICTING_INSTRUCTIONS',
+  REQUIRES_MANAGER_REVIEW = 'REQUIRES_MANAGER_REVIEW',
 }
 
-/**
- * Confidence level based on score
- */
+export enum TaskType {
+  INBOUND_RECEIPT = 'INBOUND_RECEIPT',
+  OUTBOUND_PREPARATION = 'OUTBOUND_PREPARATION',
+  OUTBOUND_DELIVERY = 'OUTBOUND_DELIVERY',
+  TRANSFER_DISTRIBUTION = 'TRANSFER_DISTRIBUTION',
+  NOTIFICATION = 'NOTIFICATION',
+  FOLLOW_UP = 'FOLLOW_UP',
+}
+
 export enum ConfidenceLevel {
-  HIGH = 'HIGH',      // 0.8-1.0
-  MEDIUM = 'MEDIUM',  // 0.5-0.79
-  LOW = 'LOW',       // 0.0-0.49
+  HIGH = 'HIGH',
+  MEDIUM = 'MEDIUM',
+  LOW = 'LOW',
 }
 
-/**
- * AI-generated proposal for an InboundItem
- * ═══════════════════════════════════════════════════════════════════════════════════════════
- */
-export class AiProposalDto {
-  /** Unique proposal ID */
-  id: string;
+export enum ManagerRecommendation {
+  NEEDS_REVIEW = 'NEEDS_REVIEW',
+  SAFE_TO_APPROVE = 'SAFE_TO_APPROVE',
+  NEEDS_CLARIFICATION = 'NEEDS_CLARIFICATION',
+  REJECT_OR_IGNORE = 'REJECT_OR_IGNORE',
+}
 
-  /** Linked InboundItem ID */
+export enum ProposalStatus {
+  GENERATED = 'GENERATED',
+  ACCEPTED = 'ACCEPTED',
+  EDITED = 'EDITED',
+  REJECTED = 'REJECTED',
+}
+
+export enum FeedbackType {
+  ACCEPTED = 'ACCEPTED',
+  CORRECTED = 'CORRECTED',
+  REJECTED = 'REJECTED',
+}
+
+export enum QualityRating {
+  EXCELLENT = 'EXCELLENT',
+  GOOD = 'GOOD',
+  POOR = 'POOR',
+}
+
+export interface AiProposalContract {
+  proposalVersion: string;
   inboundItemId: string;
-
-  /** AI model/reasoning source */
-  modelName: string;
-
-  /** Generated at */
-  generatedAt: string;
-
-  // ─── PROPOSED VALUES ────────────────────────────────────────────────────────
-
-  /** Suggested request type classification */
-  @IsEnum(RequestType)
-  @IsOptional()
-  suggestedRequestType?: RequestType;
-
-  /** Confidence score (0.0 - 1.0) */
-  @IsNumber()
-  @Min(0)
-  @Max(1)
-  requestTypeConfidence: number;
-
-  /** Suggested priority */
-  @IsEnum(Priority)
-  @IsOptional()
-  suggestedPriority?: Priority;
-
-  /** Confidence score (0.0 - 1.0) */
-  @IsNumber()
-  @Min(0)
-  @Max(1)
-  priorityConfidence: number;
-
-  /** Suggested supplier name (if detected) */
-  @IsString()
-  @IsOptional()
-  suggestedSupplierName?: string;
-
-  /** Suggested location/destination */
-  @IsString()
-  @IsOptional()
-  suggestedLocation?: string;
-
-  /** Suggested due date */
-  @IsString()
-  @IsOptional()
-  suggestedDueDate?: string;
-
-  // ─── COORDINATOR ASSIGNMENT ────────────────────────────────────────────────────────
-
-  /** Suggested coordinator type */
-  @IsEnum(CoordinatorType)
-  suggestedCoordinatorType: CoordinatorType;
-
-  /** Confidence score */
-  @IsNumber()
-  @Min(0)
-  @Max(1)
-  coordinatorConfidence: number;
-
-  /** List of matching coordinators with scores (for selection UI) */
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CoordinatorSuggestion)
-  coordinatorSuggestions: CoordinatorSuggestion[];
-
-  // ─── TASK PROPOSALS ────────────────────────────────────────────────────────────
-
-  /** Number of tasks to create */
-  @IsNumber()
-  @Min(1)
-  @Max(10)
-  suggestedTaskCount: number;
-
-  /** Individual task proposals */
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => TaskProposal)
-  taskProposals: TaskProposal[];
-
-  // ─── DATA QUALITY ────────────────────────────────────────────────────────────────
-
-  /** Flags for missing/ambiguous data */
-  @IsArray()
-  @IsEnum(DataQualityFlag, { each: true })
-  dataQualityFlags: DataQualityFlag[];
-
-  /** Overall confidence level */
-  @IsEnum(ConfidenceLevel)
-  overallConfidence: ConfidenceLevel;
-
-  /** Human-readable summary */
-  @IsString()
+  sourceType: string;
+  sourceSubType?: string;
   summary: string;
-
-  /** Reasoning/explanation */
-  @IsString()
-  reasoning: string;
+  managerRecommendation: ManagerRecommendation;
+  overallConfidence: ConfidenceLevel;
+  requestInterpretation: RequestInterpretation;
+  suggestedPriority: SuggestedPriority;
+  suggestedCoordinatorRouting: CoordinatorRouting;
+  extractedFields?: ExtractedFields;
+  proposedTasks: TaskProposal[];
+  dataQualityFlags: DataQualityFlag[];
+  decisionHints: DecisionHints;
+  rawReasoningSummary?: string;
+  modelMeta: ModelMeta;
 }
 
-/**
- * Coordinator suggestion with score
- */
-export class CoordinatorSuggestion {
-  @IsString()
-  coordinatorId: string;
-
-  @IsString()
-  email: string;
-
-  @IsString()
-  displayName: string;
-
-  @IsEnum(CoordinatorType)
-  role: CoordinatorType;
-
-  @IsNumber()
-  @Min(0)
-  @Max(1)
-  matchScore: number;
-
-  @IsString()
-  @IsOptional()
-  rationale?: string;
+export interface RequestInterpretation {
+  suggestedRequestType?: RequestType;
+  requestTypeConfidence: number;
+  businessMeaning?: string;
+  requiresManagerClarification: boolean;
 }
 
-/**
- * Task proposal
- */
-export class TaskProposal {
-  @IsNumber()
-  taskIndex: number;
+export interface SuggestedPriority {
+  value: Priority;
+  reason: string;
+}
 
-  @IsString()
+export interface CoordinatorRouting {
+  primaryCoordinatorType: CoordinatorType;
+  secondaryCoordinatorTypes: CoordinatorType[];
+  routingReason: string;
+}
+
+export interface ExtractedFields {
+  supplierName?: string;
+  clientName?: string;
+  locationName?: string;
+  destinationName?: string;
+  requestedDate?: string;
+  referenceNumber?: string;
+  urgencyText?: string;
+  goodsDescription?: string;
+}
+
+export interface TaskProposal {
+  sequence: number;
+  taskType: TaskType;
   title: string;
-
-  @IsString()
   description: string;
-
-  @IsEnum(RequestType)
-  requestType: RequestType;
-
-  @IsEnum(CoordinatorType)
-  suggestedRole: CoordinatorType;
-
-  @IsNumber()
-  @Min(0)
-  @Max(1)
-  confidence: number;
-
-  @IsString()
-  @IsOptional()
-  notes?: string;
+  suggestedCoordinatorType: CoordinatorType;
+  priority: Priority;
+  required: boolean;
+  dependencyType: TaskDependencyType;
+  dueDate?: string;
+  reason: string;
 }
 
-/**
- * Request to generate AI proposal
- */
-export class GenerateProposalRequest {
-  @IsString()
+export interface DataQualityFlag {
+  code: DataQualityFlagCode;
+  severity: string;
+  message: string;
+}
+
+export interface DecisionHints {
+  canAutoProceed: boolean;
+  shouldCreateCase: boolean;
+  shouldCreateTasks: boolean;
+  shouldBlockUntilManagerReview: boolean;
+}
+
+export interface ModelMeta {
+  modelName: string;
+  temperature: number;
+  generatedAt: string;
+}
+
+export interface GenerateProposalRequest {
   inboundItemId: string;
-
-  /** Optional: include coordinator workload in decision */
-  @IsString()
-  @IsOptional()
-  excludeCoordinatorId?: string;
+  regenerate?: boolean;
 }
 
-/**
- * Manager feedback on AI proposal
- */
-export class ProposalFeedback {
-  @IsString()
+export interface ProposalFeedbackRequest {
   proposalId: string;
-
-  /** What the manager changed */
-  @IsEnum(RequestType)
-  @IsOptional()
-  actualRequestType?: RequestType;
-
-  @IsEnum(Priority)
-  @IsOptional()
-  actualPriority?: Priority;
-
-  @IsString()
-  @IsOptional()
-  actualSupplierName?: string;
-
-  @IsString()
-  @IsOptional()
-  actualLocation?: string;
-
-  @IsString()
-  @IsOptional()
-  actualCoordinatorId?: string;
-
-  /** Quality of AI suggestion */
-  @IsEnum(ConfidenceLevel)
-  @IsOptional()
-  suggestionQuality?: ConfidenceLevel;
-
-  /** Optional feedback text */
-  @IsString()
-  @IsOptional()
-  feedback?: string;
-}
-
-/**
- * AI Service interface
- * ═══════════════════════════════════════════════════════════════════════════════════
- */
-export interface IAiService {
-  /**
-   * Generate proposal for an inbound item
-   */
-  generateProposal(inboundItemId: string): Promise<AiProposalDto>;
-
-  /**
-   * Generate proposals for multiple items
-   */
-  generateBatchProposals(inboundItemIds: string[]): Promise<AiProposalDto[]>;
-
-  /**
-   * Record manager feedback for learning
-   */
-  recordFeedback(feedback: ProposalFeedback): Promise<void>;
-
-  /**
-   * Get proposal statistics
-   */
-  getProposalStats(): Promise<ProposalStats>;
-}
-
-/**
- * Proposal statistics
- */
-export class ProposalStats {
-  totalProposals: number;
-  averageConfidence: number;
-  acceptanceRate: number;
-  topRejectedReasons: { reason: string; count: number }[];
-  coordinatorAccuracy: { coordinatorId: string; accuracy: number }[];
+  feedbackType: FeedbackType;
+  finalRequestType?: string;
+  finalPriority?: string;
+  finalCoordinatorId?: string;
+  qualityRating?: QualityRating;
+  feedbackText?: string;
+  createdBy?: string;
 }
