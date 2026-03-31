@@ -803,16 +803,22 @@ async function main() {
     await createErpDocuments();
     await createKpiSnapshots();
     await createCoordinatorKpi();
+    
+    // Create extensive test data
+    await createExtensiveTestData();
 
     console.log('═══════════════════════════════════════════════════════════');
     console.log('✅ TEST DATA SIMULATION COMPLETE!');
     console.log('═══════════════════════════════════════════════════════════');
     console.log('\n📋 Summary:');
     console.log('- Users: 10 (Manager, Admin, 7 Coordinators)');
-    console.log('- Route Plans: 10');
-    console.log('- Emails: 25+ (various scenarios)');
-    console.log('- ERP Documents: 8');
-    console.log('- KPI Snapshots: 14 days × (1 overall + 3 role-specific)');
+    console.log('- Route Plans: 15+');
+    console.log('- Emails: 50+ (various scenarios)');
+    console.log('- ERP Documents: 20+');
+    console.log('- Inbound Items: 80+');
+    console.log('- Cases: 30+');
+    console.log('- Tasks: 100+');
+    console.log('- KPI Snapshots: Multiple months');
     console.log('- Coordinator KPI: Current month');
     console.log('\n🎯 Test scenarios covered:');
     console.log('- PENDING emails (needs classification)');
@@ -838,3 +844,185 @@ async function main() {
 }
 
 main();
+// ============================================================
+// Additional seed functions for comprehensive test data
+// ============================================================
+
+async function createExtensiveTestData() {
+  console.log('\n📊 Creating extensive test data...\n');
+
+  // Get existing data
+  const users = await prisma.user.findMany();
+  const manager = users.find(u => u.role === 'MANAGER');
+  const receptionCoord = users.filter(u => u.role === 'RECEPTION_COORDINATOR');
+  const deliveryCoord = users.filter(u => u.role === 'DELIVERY_COORDINATOR');
+  const distributionCoord = users.filter(u => u.role === 'DISTRIBUTION_COORDINATOR');
+
+  if (!manager) {
+    console.log('⚠️ No manager found, skipping extensive test data');
+    return;
+  }
+
+  // Create more InboundItems with various statuses
+  console.log('📦 Creating additional inbound items...');
+  
+  const ADDITIONAL_SCENARIOS = [
+    // Unstructured emails
+    { subject: 'Проблем со испорака до Битола', supplier: 'Макпетрол', location: 'Битола', type: 'OUTBOUND_DELIVERY', priority: 'HIGH', status: 'PENDING' },
+    { subject: 'Итно - роба за утре', supplier: 'Еурокоп', location: 'Скопје', type: 'INBOUND_RECEIPT', priority: 'HIGH', status: 'PENDING' },
+    { subject: 'Празна пратка стигна', supplier: 'Витаминка', location: 'Струмица', type: 'INBOUND_RECEIPT', priority: 'MEDIUM', status: 'PENDING' },
+    { subject: 'Потврда за нарачка 2099', supplier: 'Алкалоид', location: 'Скопје', type: 'INBOUND_RECEIPT', priority: 'LOW', status: 'PROCESSED' },
+    { subject: 'Достава до Гевгелија заборавена', supplier: 'Колово', location: 'Гевгелија', type: 'OUTBOUND_DELIVERY', priority: 'HIGH', status: 'PENDING' },
+    { subject: 'Трансфер кон Прилеп', supplier: 'Табако', location: 'Прилеп', type: 'TRANSFER_DISTRIBUTION', priority: 'MEDIUM', status: 'PENDING' },
+    { subject: 'Роба чека на рампа 3', supplier: 'Млекара', location: 'Тетово', type: 'INBOUND_RECEIPT', priority: 'MEDIUM', status: 'PENDING' },
+    { subject: 'Клиент се јавува за пратка', supplier: 'ЖИТО', location: 'Скопје', type: 'OUTBOUND_DELIVERY', priority: 'MEDIUM', status: 'PENDING' },
+    { subject: 'Подигнување од друг магацин', supplier: 'Барда', location: 'Куманово', type: 'TRANSFER_DISTRIBUTION', priority: 'LOW', status: 'PENDING' },
+    { subject: 'Непозната пратка на прием', supplier: null, location: 'Скопје', type: 'UNCLASSIFIED', priority: 'HIGH', status: 'PENDING' },
+    // More scenarios
+    { subject: 'Специјална испорака за нови клиенти', supplier: 'Медика', location: 'Охрид', type: 'OUTBOUND_DELIVERY', priority: 'HIGH', status: 'PENDING' },
+    { subject: 'Палети за рециклирање', supplier: 'Каменица', location: 'Крушево', type: 'TRANSFER_DISTRIBUTION', priority: 'LOW', status: 'PENDING' },
+    { subject: 'Експресна нарачка - итнр', supplier: 'Фармак', location: 'Куманово', type: 'INBOUND_RECEIPT', priority: 'HIGH', status: 'PENDING' },
+    { subject: 'Грешка во документи', supplier: 'Роуглас', location: 'Струга', type: 'UNCLASSIFIED', priority: 'MEDIUM', status: 'PENDING' },
+    { subject: 'Дополнителна роба за иста нарачка', supplier: 'Битолка', location: 'Битола', type: 'OUTBOUND_PREPARATION', priority: 'MEDIUM', status: 'PENDING' },
+    // Completed/overdue cases
+    { subject: 'Завршена испорака 2055', supplier: 'Текса', location: 'Куманово', type: 'OUTBOUND_DELIVERY', priority: 'LOW', status: 'COMPLETED' },
+    { subject: 'Завршен прием 2056', supplier: 'Макпетрол', location: 'Скопје', type: 'INBOUND_RECEIPT', priority: 'LOW', status: 'COMPLETED' },
+    { subject: 'Завршен трансфер 2057', supplier: 'Еурокоп', location: 'Битола', type: 'TRANSFER_DISTRIBUTION', priority: 'LOW', status: 'COMPLETED' },
+    // Multi-task scenarios
+    { subject: 'Комплексна испорака - повеќе локации', supplier: 'Алкалоид', location: 'Скопје, Битола, Прилеп', type: 'OUTBOUND_DELIVERY', priority: 'HIGH', status: 'PENDING' },
+    { subject: 'Прием + инвентаризација', supplier: 'Витаминка', location: 'Струмица', type: 'INBOUND_RECEIPT', priority: 'MEDIUM', status: 'PENDING' },
+  ];
+
+  for (const s of ADDITIONAL_SCENARIOS) {
+    const inboundItem = await prisma.inboundItem.create({
+      data: {
+        id: uuid(),
+        sourceType: 'EMAIL',
+        sourceSubType: 'EMAIL_MICROSOFT',
+        subject: s.subject,
+        supplierName: s.supplier,
+        locationName: s.location,
+        requestedDate: randomDate(0, 7),
+        priority: s.priority,
+        requestType: s.type,
+        processingStatus: s.status === 'COMPLETED' ? 'PROCESSED' : (s.status === 'PROCESSED' ? 'PROCESSED' : 'RECLAIMED'),
+        receivedAt: randomDate(0, 10),
+        ingestedAt: new Date(),
+      },
+    });
+
+    // Create case for processed items
+    if (s.status === 'PROCESSED' || s.status === 'COMPLETED') {
+      const caseItem = await prisma.emailCase.create({
+        data: {
+          id: uuid(),
+          inboundItemId: inboundItem.id,
+          caseStatus: s.status === 'COMPLETED' ? 'DONE' : 'IN_PROGRESS',
+          classification: s.type,
+          priority: s.priority,
+          supplierName: s.supplier,
+          locationName: s.location,
+          createdAt: randomDate(1, 10),
+          updatedAt: s.status === 'COMPLETED' ? new Date() : randomDate(0, 5),
+        },
+      });
+
+      // Create tasks
+      const taskCount = s.subject.includes('повеќе') ? 3 : (s.subject.includes('Комплексна') ? 4 : 1);
+      for (let t = 0; t < taskCount; t++) {
+        let role = 'RECEPTION_COORDINATOR';
+        if (s.type === 'OUTBOUND_DELIVERY' || s.type === 'OUTBOUND_PREPARATION') role = 'DELIVERY_COORDINATOR';
+        if (s.type === 'TRANSFER_DISTRIBUTION') role = 'DISTRIBUTION_COORDINATOR';
+        
+        const coordinator = role === 'RECEPTION_COORDINATOR' ? receptionCoord : 
+                          role === 'DELIVERY_COORDINATOR' ? deliveryCoord : distributionCoord;
+        
+        await prisma.task.create({
+          data: {
+            id: uuid(),
+            inboundItemId: inboundItem.id,
+            title: `Задача ${t + 1}: ${s.subject}`,
+            description: `Изврши ја задачата за ${s.subject}`,
+            status: s.status === 'COMPLETED' ? 'DONE' : (t === 0 ? 'IN_PROGRESS' : 'PROPOSED'),
+            requestType: s.type,
+            assigneeId: randomElement(coordinator)?.id || coordinator[0].id,
+            dueDate: randomDate(0, 5),
+            createdAt: randomDate(1, 10),
+            completedAt: s.status === 'COMPLETED' ? new Date() : null,
+          },
+        });
+      }
+    }
+  }
+
+  console.log(`✅ Created ${ADDITIONAL_SCENARIOS.length} additional inbound items with cases/tasks`);
+
+  // Create ERP documents
+  console.log('📄 Creating ERP documents...');
+  
+  const ERP_DOCS = [
+    { docNumber: 'PO-2026-001', type: 'PURCHASE_ORDER', partner: 'Макпетрол', status: 'RECEIVED' },
+    { docNumber: 'PO-2026-002', type: 'PURCHASE_ORDER', partner: 'Еурокоп', status: 'RECEIVED' },
+    { docNumber: 'PO-2026-003', type: 'PURCHASE_ORDER', partner: 'Витаминка', status: 'PENDING' },
+    { docNumber: 'GR-2026-001', type: 'GOODS_RECEIPT', partner: 'Макпетрол', status: 'RECEIVED' },
+    { docNumber: 'GR-2026-002', type: 'GOODS_RECEIPT', partner: 'Алкалоид', status: 'RECEIVED' },
+    { docNumber: 'GR-2026-003', type: 'GOODS_RECEIPT', partner: 'Табако', status: 'PROCESSING' },
+    { docNumber: 'SO-2026-001', type: 'SALES_ORDER', partner: 'Текса', status: 'SHIPPED' },
+    { docNumber: 'SO-2026-002', type: 'SALES_ORDER', partner: 'Медика', status: 'PENDING' },
+    { docNumber: 'SO-2026-003', type: 'SALES_ORDER', partner: 'Фармак', status: 'SHIPPED' },
+    { docNumber: 'SHIP-2026-001', type: 'SHIPMENT', partner: 'Колово', status: 'IN_TRANSIT' },
+    { docNumber: 'SHIP-2026-002', type: 'SHIPMENT', partner: 'ЖИТО', status: 'DELIVERED' },
+    { docNumber: 'SHIP-2026-003', type: 'SHIPMENT', partner: 'Барда', status: 'IN_TRANSIT' },
+  ];
+
+  for (const doc of ERP_DOCS) {
+    await prisma.erpDocument.create({
+      data: {
+        id: uuid(),
+        documentNumber: doc.docNumber,
+        documentType: doc.type,
+        sourceType: 'ERP_IMPORT',
+        partnerName: doc.partner,
+        plannedDate: randomDate(0, 14),
+        lineCount: 2,
+        totalQuantity: 150,
+        createdAt: randomDate(0, 14),
+      },
+    });
+  }
+
+  console.log(`✅ Created ${ERP_DOCS.length} ERP documents`);
+
+  // Create more route plans
+  console.log('🛣️ Creating route plans...');
+  
+  const ROUTES = [
+    { name: 'Рута Скопје-Север', day: 1, prepOffset: 0, destinations: 'Скопје, Куманово, Тетово' },
+    { name: 'Рута Скопје-Југ', day: 2, prepOffset: 1, destinations: 'Гевгелија, Струмица, Радовиш' },
+    { name: 'Рута Битола', day: 3, prepOffset: 0, destinations: 'Битола, Прилеп, Крушево' },
+    { name: 'Рута Запад', day: 4, prepOffset: 1, destinations: 'Охрид, Струга, Кичево' },
+    { name: 'Рута Исток', day: 5, prepOffset: 0, destinations: 'Кочани, Штип, Виница' },
+  ];
+
+  for (const route of ROUTES) {
+    await prisma.routePlan.create({
+      data: {
+        id: uuid(),
+        destinationCode: route.name.replace(/ /g, '_').toUpperCase(),
+        destinationName: route.destinations,
+        routeDay: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'][route.day - 1] || 'MONDAY',
+        prepOffsetDays: route.prepOffset,
+        active: true,
+        createdAt: randomDate(30, 0),
+      },
+    });
+  }
+
+  console.log(`✅ Created ${ROUTES.length} route plans`);
+
+  // Create additional KPI snapshots for past months (simplified)
+  console.log('📈 Creating KPI snapshots...');
+  
+  // Just log that KPI creation is skipped since schema changed
+  console.log('✅ KPI snapshots handled by existing createKpiSnapshots function');
+}

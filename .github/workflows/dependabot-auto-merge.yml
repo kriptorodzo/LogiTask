@@ -16,8 +16,39 @@ jobs:
     if: >
       github.actor == 'dependabot[bot]'
     steps:
+      - name: Wait for required checks
+        id: wait_checks
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+          
+          echo "Waiting for status checks to complete..."
+          
+          # Wait up to 5 minutes for all checks to complete
+          for i in {1..30}; do
+            # Get the combined status
+            STATUS=$(gh api repos/$REPO/commits/${{ github.sha }}/status --jq '.state')
+            echo "Combined status: $STATUS"
+            
+            if [ "$STATUS" = "success" ]; then
+              echo "All checks passed!"
+              echo "checks_passed=true" >> $GITHUB_OUTPUT
+              exit 0
+            elif [ "$STATUS" = "failure" ]; then
+              echo "Checks failed!"
+              echo "checks_passed=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            sleep 10
+          done
+          
+          echo "Timed out waiting for checks"
+          echo "checks_passed=false" >> $GITHUB_OUTPUT
+
       - name: Check if PR is mergeable
         id: check
+        if: steps.wait_checks.outputs.checks_passed == 'true'
         run: |
           PR=${{ github.event.pull_request.number }}
           

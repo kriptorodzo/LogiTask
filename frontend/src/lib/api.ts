@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { getSession } from 'next-auth/react';
 
-const API_URL = process.env.BACKEND_URL || 'http://localhost:4000';
+// Use relative API routes - all requests go through Next.js proxy
+// Browser should never call backend (localhost:4000) directly
+const API_URL = '/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -13,11 +15,26 @@ const apiClient = axios.create({
 // Add auth token to requests
 apiClient.interceptors.request.use(async (config) => {
   const session = await getSession();
-  if (session && (session as any).accessToken) {
-    config.headers.Authorization = `Bearer ${(session as any).accessToken}`;
+  // For development, use dev-bypass-token if no session
+  if (session?.accessToken) {
+    config.headers['Authorization'] = `Bearer ${session.accessToken}`;
+  } else {
+    config.headers['Authorization'] = 'Bearer dev-bypass-token';
   }
   return config;
 });
+
+// Log responses
+apiClient.interceptors.response.use(
+  (response) => {
+    console.log('[API RESPONSE] Success:', response.config.url, 'status:', response.status);
+    return response;
+  },
+  (error) => {
+    console.log('[API RESPONSE] Error:', error.config?.url, 'status:', error.response?.status);
+    return Promise.reject(error);
+  }
+);
 
 // Email API
 export const emailApi = {
