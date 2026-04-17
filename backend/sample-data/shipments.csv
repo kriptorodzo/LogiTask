@@ -1,0 +1,5 @@
+documentNumber,documentType,partnerCode,partnerName,destinationCode,destinationName,plannedDate,lineCount,totalQuantity
+SHIP-2026-100,SHIPMENT_ORDER,C1,Текса АД,D1,Скопје,2026-04-03,4,380
+SHIP-2026-101,SHIPMENT_ORDER,C2,Медика АД,D2,Битола,2026-04-04,6,580
+SHIP-2026-102,SHIPMENT_ORDER,C3,ЖИТО АД,D5,Гевгелија,2026-04-05,3,290
+SHIP-2026-103,SHIPMENT_ORDER,C4,Барда АД,D6,Куманово,2026-04-06,5,470

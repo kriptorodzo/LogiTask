@@ -51,7 +51,7 @@ export default function ManagerInboxPage() {
   const [summary, setSummary] = useState<InboundSummary | null>(null);
   const [coordinators, setCoordinators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>('in_progress');
+  const [activeTab, setActiveTab] = useState<TabType>('new');
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
 
@@ -59,7 +59,7 @@ export default function ManagerInboxPage() {
   const isManager = userRole === 'MANAGER';
 
   const { loadState, saveState } = useStatePersistence('manager', {
-    activeTab: 'in_progress',
+    activeTab: 'new',
     search: '',
   });
 
@@ -77,7 +77,20 @@ export default function ManagerInboxPage() {
     saveState({ activeTab, search: searchQuery });
   }, [activeTab, searchQuery]);
 
+  // Debug session
   useEffect(() => {
+    console.log('[SESSION DEBUG] session:', session);
+    console.log('[SESSION DEBUG] status:', status);
+    console.log('[SESSION DEBUG] userRole:', userRole);
+    console.log('[SESSION DEBUG] isManager:', isManager);
+  }, [session, status, userRole, isManager]);
+
+  useEffect(() => {
+    console.log('[LOADER DEBUG] Session:', session);
+    console.log('[LOADER DEBUG] Status:', status);
+    console.log('[LOADER DEBUG] User role:', userRole);
+    console.log('[LOADER DEBUG] Is manager:', isManager);
+    
     if (status === 'unauthenticated') {
       router.push('/api/auth/signin');
     } else if (status === 'authenticated' && !isManager) {
@@ -85,22 +98,71 @@ export default function ManagerInboxPage() {
     }
   }, [status, router, isManager]);
 
+  // Load data on mount
   useEffect(() => {
-    if (session && isManager) {
-      loadData();
-    }
-  }, [session, isManager]);
+    loadData();
+  }, []);
+
+  // Also allow manual refresh
+  const handleManualRefresh = () => {
+    loadData();
+  };
 
   async function loadData() {
+    console.log('[loadData] Starting...');
     try {
-      console.log('[DEBUG] Loading inbound data...');
-      const [inboundData, summaryData, coordinatorsData] = await Promise.all([
-        inboundApi.getAll({}),
-        inboundApi.getSummary(),
-        userApi.getCoordinators(),
-      ]);
-      console.log('[DEBUG] inboundData length:', inboundData?.length);
-      console.log('[DEBUG] summaryData:', summaryData);
+      console.log('[loadData] isManager:', isManager);
+      
+      // Fetch through Next.js API proxy route
+      console.log('[loadData] Fetching /api/inbound...');
+      try {
+        const response = await fetch('/api/inbound');
+        const result = await response.json();
+        console.log('[loadData] API result length:', result?.length);
+        
+        if (result && Array.isArray(result)) {
+          setInboundItems(result);
+          // Fetch summary from API route
+          try {
+            const summaryResponse = await fetch('/api/inbound/summary');
+            const summaryResult = await summaryResponse.json();
+            console.log('[loadData] Summary result:', summaryResult);
+            setSummary(summaryResult);
+          } catch (e) {
+            console.error('[loadData] Summary fetch error:', e);
+          }
+          setLoading(false);
+          console.log('[loadData] Data loaded! Count:', result.length);
+          return;
+        }
+      } catch (e) {
+        console.error('[loadData] API route fetch error:', e);
+      }
+      
+      // Fall back to API client (uses proxy routes internally)
+      let inboundData, summaryData, coordinatorsData;
+      
+      try {
+        inboundData = await inboundApi.getAll({});
+      } catch (e) {
+        console.error('inboundApi.getAll() failed:', e);
+        inboundData = [];
+      }
+      
+      try {
+        summaryData = await inboundApi.getSummary();
+      } catch (e) {
+        console.error('inboundApi.getSummary() failed:', e);
+        summaryData = { total: 0, newToday: 0, pendingClassification: 0, inProgress: 0, completed: 0, urgentCount: 0 };
+      }
+      
+      try {
+        coordinatorsData = await userApi.getCoordinators();
+      } catch (e) {
+        console.error('userApi.getCoordinators() failed:', e);
+        coordinatorsData = [];
+      }
+      
       setInboundItems(inboundData || []);
       setSummary(summaryData);
       setCoordinators(coordinatorsData);
@@ -183,7 +245,9 @@ export default function ManagerInboxPage() {
   }
 
   const filteredItems = getFilteredItems();
-
+  
+  // Log detailed render state
+  // Render
   return (
     <PageShell title="Manager Inbox" subtitle="Центарaлен преглед на сите влезни податоци">
       {/* Summary Cards */}

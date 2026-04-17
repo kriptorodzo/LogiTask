@@ -1,0 +1,5 @@
+documentNumber,documentType,partnerCode,partnerName,destinationCode,destinationName,plannedDate,lineCount,totalQuantity
+SO-2026-100,SALES_ORDER,C1,Текса АД,D1,Скопје,2026-04-02,4,400
+SO-2026-101,SALES_ORDER,C2,Медика АД,D2,Битола,2026-04-03,6,600
+SO-2026-102,SALES_ORDER,C3,Фармак АД,D1,Скопје,2026-04-04,3,300
+SO-2026-103,SALES_ORDER,C4,Роуглас АД,D4,Струга,2026-04-05,5,500

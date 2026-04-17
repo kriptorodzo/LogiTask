@@ -37,7 +37,7 @@ export default function CoordinatorPage() {
   
   // Get user role
   const userRole = (session?.user as any)?.role || 'RECEPTION_COORDINATOR';
-  const userId = session?.user?.email;
+  const userId = session?.user?.email ?? '';
   
   // Get default filter for role
   const getDefaultFilter = (): FilterType => {
@@ -225,7 +225,7 @@ export default function CoordinatorPage() {
     return colors[type] || '#6b7280';
   };
 
-  const isOverdue = (task: Task) => {
+  const isOverdue = (task: any) => {
     if (task.status === 'DONE') return false;
     if (!task.dueDate) return false;
     return new Date(task.dueDate) < new Date();
