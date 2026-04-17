@@ -16,11 +16,8 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(async (config) => {
   const session = await getSession();
   // For development, use dev-bypass-token if no session
-  if (session?.accessToken) {
-    config.headers['Authorization'] = `Bearer ${session.accessToken}`;
-  } else {
-    config.headers['Authorization'] = 'Bearer dev-bypass-token';
-  }
+  const token = (session?.user as any)?.accessToken || 'dev-bypass-token';
+  config.headers['Authorization'] = `Bearer ${token}`;
   return config;
 });
 

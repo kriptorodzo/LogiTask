@@ -319,43 +319,43 @@ SHIPMENT_ORDER,SHIP-001,Купувач Г,Прилеп,15,150,2026-04-18`;
           </div>
 
           <div style={{ display: 'flex', gap: '24px' }}>
-          {/* File Upload */}
-          <div style={{ flex: 1, padding: '24px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>Качи фајл</h2>
-            <p style={{ color: '#666', marginBottom: '16px' }}>Поддржува CSV формат</p>
-            
-            <input
-              type="file"
-              accept=".csv,.json"
-              onChange={handleFileChange}
-              style={{ marginBottom: '16px' }}
-            />
-
-            {file && (
-              <div style={{ 
-                padding: '12px', 
-                background: '#f5f5f5', 
-                borderRadius: '4px',
-                marginTop: '12px'
-              }}>
-                <strong>Selected:</strong> {file.name} ({(file.size / 1024).toFixed(1)} KB)
-              </div>
-            )}
-          </div>
-
-          {/* JSON Paste - Hidden for simplicity, collapsed by default */}
-          <details style={{ flex: 1, padding: '16px', border: '1px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer' }}>
-            <summary style={{ fontSize: '16px', fontWeight: 'bold', color: '#666', cursor: 'pointer' }}>
-              ▼ Или залепи JSON (опционално)
-            </summary>
-            <div style={{ marginTop: '16px' }}>
-              <p style={{ color: '#666', marginBottom: '16px', fontSize: '13px' }}>
-                За напредни корисници - можете да залепите JSON низводно.
-              </p>
+            {/* File Upload */}
+            <div style={{ flex: 1, padding: '24px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>Качи фајл</h2>
+              <p style={{ color: '#666', marginBottom: '16px' }}>Поддржува CSV формат</p>
               
-              <textarea
-              onChange={handleJSONPaste}
-              placeholder={`[
+              <input
+                type="file"
+                accept=".csv,.json"
+                onChange={handleFileChange}
+                style={{ marginBottom: '16px' }}
+              />
+
+              {file && (
+                <div style={{ 
+                  padding: '12px', 
+                  background: '#f5f5f5', 
+                  borderRadius: '4px',
+                  marginTop: '12px'
+                }}>
+                  <strong>Selected:</strong> {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </div>
+
+            {/* JSON Paste - Hidden for simplicity, collapsed by default */}
+            <details style={{ flex: 1, padding: '16px', border: '1px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer' }}>
+              <summary style={{ fontSize: '16px', fontWeight: 'bold', color: '#666', cursor: 'pointer' }}>
+                ▼ Или залепи JSON (опционално)
+              </summary>
+              <div style={{ marginTop: '16px' }}>
+                <p style={{ color: '#666', marginBottom: '16px', fontSize: '13px' }}>
+                  За напредни корисници - можете да залепите JSON низводно.
+                </p>
+                
+                <textarea
+                  onChange={handleJSONPaste}
+                  placeholder={`[
   {
     "documentType": "PURCHASE_ORDER",
     "documentNumber": "PO-2024-001",
@@ -365,16 +365,18 @@ SHIPMENT_ORDER,SHIP-001,Купувач Г,Прилеп,15,150,2026-04-18`;
     "plannedDate": "2024-03-20"
   }
 ]`}
-              style={{
-                width: '100%',
-                height: '200px',
-                padding: '12px',
-                border: '1px solid #e0e0e0',
-                borderRadius: '4px',
-                fontFamily: 'monospace',
-                fontSize: '14px',
-              }}
-            />
+                  style={{
+                    width: '100%',
+                    height: '200px',
+                    padding: '12px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+            </details>
           </div>
         </div>
       )}
